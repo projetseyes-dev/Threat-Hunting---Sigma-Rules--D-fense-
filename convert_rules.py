@@ -5,8 +5,8 @@ Convertit les règles Sigma vers Splunk SPL et Microsoft Sentinel KQL via
 
 Usage :
     pip install sigma-cli pysigma-backend-splunk pysigma-backend-kusto \
-        pysigma-pipeline-windows pysigma-pipeline-sysmon
-    python convert_rules.py rules/ --out build/
+        pysigma-pipeline-windows
+    python convert_rules.py detections/ --out build/
 
 Sortie :
     build/splunk/<rule_id>.spl
@@ -53,8 +53,7 @@ def check_sigma_cli() -> bool:
         sys.stderr.write(
             "[!] `sigma` introuvable dans le PATH. Installer :\n"
             "    pip install sigma-cli pysigma-backend-splunk "
-            "pysigma-backend-kusto pysigma-pipeline-windows "
-            "pysigma-pipeline-sysmon\n"
+            "pysigma-backend-kusto pysigma-pipeline-windows\n"
         )
         return False
     return True
@@ -93,6 +92,22 @@ def convert_one(
     return False, err
 
 
+def convert_with_fallback(
+    rule_path: Path, target: str, preferred_pipelines: list[str], out_path: Path
+) -> tuple[bool, str]:
+    """
+    Essaye d'abord avec pipelines préférés, puis fallback sans pipeline.
+    Très utile en CI quand un plugin de pipeline n'est pas disponible.
+    """
+    ok, msg = convert_one(rule_path, target, preferred_pipelines, out_path)
+    if ok:
+        return True, msg
+    fallback_ok, fallback_msg = convert_one(rule_path, target, [], out_path)
+    if fallback_ok:
+        return True, f"Fallback sans pipeline (erreur initiale: {msg})"
+    return False, f"{msg}\nFallback failed: {fallback_msg}"
+
+
 def load_rule_meta(rule_path: Path) -> tuple[str, str]:
     try:
         with rule_path.open("r", encoding="utf-8") as fh:
@@ -108,7 +123,7 @@ def collect_rules(target: Path) -> list[Path]:
     if target.is_dir():
         return sorted(
             p for p in (list(target.rglob("*.yml")) + list(target.rglob("*.yaml")))
-            if "tests" not in p.parts
+            if "tests" not in p.parts and p.name.startswith("sigma_rule.")
         )
     return []
 
@@ -180,8 +195,9 @@ def main(argv: list[str] | None = None) -> int:
 
         if "splunk" in args.targets:
             out = splunk_dir / f"{slug}.spl"
-            ok, msg = convert_one(rule, "splunk",
-                                  ["splunk_windows", "sysmon"], out)
+            ok, msg = convert_with_fallback(
+                rule, "splunk", ["splunk_windows"], out
+            )
             res.splunk_ok = ok
             res.splunk_output = out if ok else None
             if not ok:
@@ -189,8 +205,11 @@ def main(argv: list[str] | None = None) -> int:
 
         if "kusto" in args.targets:
             out = sentinel_dir / f"{slug}.kql"
-            ok, msg = convert_one(rule, "kusto",
-                                  ["microsoft_xdr", "sysmon"], out)
+            # Sentinel = backend Kusto. Pipeline microsoft_xdr préféré,
+            # fallback automatique sans pipeline si non disponible.
+            ok, msg = convert_with_fallback(
+                rule, "kusto", ["microsoft_xdr"], out
+            )
             res.sentinel_ok = ok
             res.sentinel_output = out if ok else None
             if not ok:

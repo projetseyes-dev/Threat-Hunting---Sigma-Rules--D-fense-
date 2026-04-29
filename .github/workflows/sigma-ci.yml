@@ -91,11 +91,13 @@ jobs:
           pip install sigma-cli==1.0.4 \
                       pysigma-backend-splunk \
                       pysigma-backend-kusto \
-                      pysigma-pipeline-windows \
-                      pysigma-pipeline-sysmon
+                      pysigma-pipeline-windows
+
+      - name: Verify sigma plugins
+        run: sigma plugin list --compatible
 
       - name: Convert rules
-        run: python convert_rules.py rules/ --out build/
+        run: python convert_rules.py detections/ --out build/
 
       - name: Upload conversion artifacts
         uses: actions/upload-artifact@v4

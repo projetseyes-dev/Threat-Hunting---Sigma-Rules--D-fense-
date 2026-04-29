@@ -13,6 +13,7 @@ Usage :
 from __future__ import annotations
 
 import argparse
+import tempfile
 import subprocess
 import sys
 from pathlib import Path
@@ -37,12 +38,23 @@ def main(argv: list[str] | None = None) -> int:
     target = (repo_root / args.target).resolve()
     validator = repo_root / "validate_sigma.py"
 
-    cmd = [sys.executable, str(validator), str(target)]
-    if args.strict:
-        cmd.append("--strict")
+    sigma_files = sorted(target.rglob("sigma_rule.y*ml"))
+    if not sigma_files:
+        print(f"[!] Aucun fichier sigma_rule.yml trouvé dans {target}")
+        return 1
 
-    proc = subprocess.run(cmd, cwd=str(repo_root))
-    return proc.returncode
+    with tempfile.TemporaryDirectory() as tmp:
+        stage = Path(tmp)
+        for i, src in enumerate(sigma_files, start=1):
+            dst = stage / f"{i:03d}_{src.name}"
+            dst.write_text(src.read_text(encoding="utf-8"), encoding="utf-8")
+
+        cmd = [sys.executable, str(validator), str(stage)]
+        if args.strict:
+            cmd.append("--strict")
+
+        proc = subprocess.run(cmd, cwd=str(repo_root))
+        return proc.returncode
 
 
 if __name__ == "__main__":

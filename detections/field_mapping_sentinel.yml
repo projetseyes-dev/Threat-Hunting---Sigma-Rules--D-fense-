@@ -1,0 +1,61 @@
+# Field mapping reference - Demo project
+# Purpose:
+# - Document how Sigma/Sentinel fields map to our sample JSON telemetry.
+# - Help recruiters understand the "log -> detection query" bridge.
+#
+# NOTE:
+# This file is a project mapping document. It is not consumed directly by sigma-cli.
+
+version: 1
+target: microsoft_sentinel
+description: Mapping des champs logsource vers tables/champs Sentinel utilisés dans la vitrine
+
+sources:
+  windows_security:
+    table: SecurityEvent
+    sigma_logsource:
+      product: windows
+      service: security
+    field_map:
+      EventID: EventID
+      IpAddress: IpAddress
+      LogonType: LogonType
+      TargetUserName: TargetUserName
+      TaskName: TaskName
+      TaskContent: TaskContent
+      SubjectUserName: SubjectUserName
+      SubjectDomainName: SubjectDomainName
+      NewProcessName: NewProcessName
+      ParentProcessName: ParentProcessName
+      CommandLine: CommandLine
+      Account: Account
+
+  windows_sysmon_process_access:
+    table: SysmonEvent
+    sigma_logsource:
+      product: windows
+      category: process_access
+    field_map:
+      EventID: EventID
+      SourceImage: SourceImage
+      TargetImage: TargetImage
+      GrantedAccess: GrantedAccess
+      CallTrace: CallTrace
+      User: User
+      Computer: Computer
+      TimeGenerated: TimeGenerated
+
+  windows_sysmon_dns:
+    table: SysmonEvent
+    sigma_logsource:
+      product: windows
+      category: dns_query
+    field_map:
+      EventID: EventID
+      QueryName: QueryName
+      QueryType: QueryType
+      Image: Image
+      User: User
+      DestinationIp: DestinationIp
+      Computer: Computer
+      TimeGenerated: TimeGenerated
