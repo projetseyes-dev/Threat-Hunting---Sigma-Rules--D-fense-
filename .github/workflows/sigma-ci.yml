@@ -72,8 +72,8 @@ jobs:
       - name: Run schema validator (strict)
         run: python scripts/validate_sigma.py --strict
 
-  convert-multi-siem:
-    name: Convert to SPL & KQL
+  sigma-preflight:
+    name: Sigma CLI preflight (plugins + inputs)
     runs-on: ubuntu-latest
     needs: validate-sigma
     steps:
@@ -87,27 +87,122 @@ jobs:
 
       - name: Install sigma-cli + backends
         run: |
+          set -euo pipefail
           pip install -r requirements.txt
           pip install sigma-cli==1.0.4 \
                       pysigma-backend-splunk \
                       pysigma-backend-kusto \
                       pysigma-pipeline-windows
 
-      - name: Verify sigma plugins
-        run: sigma plugin list --compatible
+      - name: Verify required sigma plugins (fail-fast)
+        run: |
+          set -euo pipefail
+          sigma plugin list --compatible > sigma_plugins.txt
+          cat sigma_plugins.txt
+          grep -Eiq 'splunk' sigma_plugins.txt || { echo "[ERROR] Missing sigma splunk backend/plugin"; exit 1; }
+          grep -Eiq 'kusto' sigma_plugins.txt || { echo "[ERROR] Missing sigma kusto backend/plugin"; exit 1; }
 
-      - name: Convert rules
-        run: python convert_rules.py detections/ --out build/
+      - name: Verify detection files exist (fail-fast)
+        run: |
+          set -euo pipefail
+          test -d detections || { echo "[ERROR] detections/ folder missing"; exit 1; }
+          COUNT=$(find detections -type f -name "sigma_rule.y*ml" | wc -l | tr -d ' ')
+          echo "Detected sigma_rule files: $COUNT"
+          test "$COUNT" -gt 0 || { echo "[ERROR] No sigma_rule.yml files found in detections/"; exit 1; }
 
-      - name: Upload conversion artifacts
+      - name: Upload preflight report
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: siem-queries
+          name: sigma-preflight-report
+          path: sigma_plugins.txt
+          retention-days: 14
+
+  convert-splunk:
+    name: Convert Sigma -> Splunk SPL
+    runs-on: ubuntu-latest
+    needs: sigma-preflight
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install sigma-cli + splunk backend
+        run: |
+          set -euo pipefail
+          pip install -r requirements.txt
+          pip install sigma-cli==1.0.4 \
+                      pysigma-backend-splunk \
+                      pysigma-pipeline-windows
+
+      - name: Convert detections to SPL (capture logs)
+        run: |
+          set -euo pipefail
+          mkdir -p build/logs
+          python convert_rules.py detections/ --targets splunk --out build/ | tee build/logs/convert_splunk.log
+
+      - name: Upload SPL artifacts + logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: splunk-conversion-artifacts
           path: |
             build/splunk/
+            build/conversion_report.md
+            build/logs/convert_splunk.log
+          retention-days: 30
+
+  convert-sentinel:
+    name: Convert Sigma -> Sentinel KQL (kusto)
+    runs-on: ubuntu-latest
+    needs: sigma-preflight
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install sigma-cli + kusto backend
+        run: |
+          set -euo pipefail
+          pip install -r requirements.txt
+          pip install sigma-cli==1.0.4 \
+                      pysigma-backend-kusto \
+                      pysigma-pipeline-windows
+
+      - name: Convert detections to KQL (capture logs)
+        run: |
+          set -euo pipefail
+          mkdir -p build/logs
+          python convert_rules.py detections/ --targets kusto --out build/ | tee build/logs/convert_sentinel.log
+
+      - name: Upload KQL artifacts + logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sentinel-conversion-artifacts
+          path: |
             build/sentinel/
             build/conversion_report.md
+            build/logs/convert_sentinel.log
           retention-days: 30
+
+  convert-quality-gate:
+    name: Conversion quality gate
+    runs-on: ubuntu-latest
+    needs: [convert-splunk, convert-sentinel]
+    steps:
+      - name: Enforce both backend conversions succeeded
+        run: |
+          set -euo pipefail
+          echo "Both conversion jobs succeeded. Gate passed."
 
   generate-coverage:
     name: Generate ATT&CK Navigator layer
@@ -127,7 +222,7 @@ jobs:
 
       - name: Generate Navigator layer
         run: |
-          python generate_navigator_layer.py rules/ \
+          python generate_navigator_layer.py detections/ \
             --out coverage/attack_navigator_layer.json \
             --name "SOC Detection Coverage - ${GITHUB_REF_NAME}"
 
@@ -158,7 +253,7 @@ jobs:
       - name: Build summary
         id: summary
         run: |
-          python generate_navigator_layer.py rules/ \
+          python generate_navigator_layer.py detections/ \
             --out /tmp/layer.json --name "PR ${{ github.event.number }}"
           {
             echo "summary<<EOF"

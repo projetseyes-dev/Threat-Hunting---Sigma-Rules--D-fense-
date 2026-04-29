@@ -59,7 +59,7 @@ def collect_rules(target: Path) -> list[Path]:
         return [target]
     return sorted(
         p for p in (list(target.rglob("*.yml")) + list(target.rglob("*.yaml")))
-        if "tests" not in p.parts
+        if "tests" not in p.parts and p.name.startswith("sigma_rule.")
     )
 
 
