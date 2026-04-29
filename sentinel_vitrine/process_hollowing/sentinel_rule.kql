@@ -1,0 +1,24 @@
+// Process Hollowing (T1055.012) - Microsoft Sentinel (KQL) - demo
+// Telemetry assumptions for the recruiter demo (matches our future samples/ JSON):
+// - Table: SecurityEvent
+// - Fields: TimeGenerated, Computer, EventID, NewProcessName, CommandLine, ParentProcessName, Account
+
+let target_images = dynamic(["svchost.exe","explorer.exe","notepad.exe","rundll32.exe","dllhost.exe","regsvr32.exe","werfault.exe"]);
+let suspicious_parents = dynamic(["powershell.exe","pwsh.exe","cmd.exe","wscript.exe","cscript.exe","mshta.exe","winword.exe","excel.exe","outlook.exe"]);
+let legit_parent_svchost = dynamic(["services.exe"]);
+let legit_parent_explorer = dynamic(["userinit.exe","winlogon.exe"]);
+
+SecurityEvent
+| where EventID == 4688
+| extend NewProcFile = tolower(tostring(extract(@"[^\\\\]+$", 0, tostring(NewProcessName))))
+| extend ParentFile = tolower(tostring(extract(@"[^\\\\]+$", 0, tostring(ParentProcessName))))
+| where NewProcFile in~ ("svchost.exe","explorer.exe","notepad.exe","rundll32.exe","dllhost.exe","regsvr32.exe","werfault.exe")
+| where CommandLine has_any ("CREATE_SUSPENDED", "-suspended", "-Suspended")
+| extend anomaly_parent = ParentFile in~ ("powershell.exe","pwsh.exe","cmd.exe","wscript.exe","cscript.exe","mshta.exe","winword.exe","excel.exe","outlook.exe")
+| extend legit_parent =
+    (NewProcFile == "svchost.exe" and ParentFile in~ ("services.exe"))
+    or (NewProcFile == "explorer.exe" and ParentFile in~ ("userinit.exe","winlogon.exe"))
+| where anomaly_parent and not(legit_parent)
+| project TimeGenerated, Computer, Account, NewProcFile, ParentFile, CommandLine
+| order by TimeGenerated desc
+

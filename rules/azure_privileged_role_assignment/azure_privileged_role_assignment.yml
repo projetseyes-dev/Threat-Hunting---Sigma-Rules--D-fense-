@@ -1,0 +1,68 @@
+title: Azure AD Privileged Role Assignment Outside PIM Workflow
+id: 8b5d6e7f-9a0b-4c1d-8e2f-3a4b5c6d7e8f
+status: experimental
+description: |
+  Détecte l'attribution d'un rôle Azure AD/Entra ID hautement privilégié
+  (Global Administrator, Privileged Role Administrator, Application
+  Administrator, etc.) en dehors du workflow PIM (Privileged Identity
+  Management). Couvre T1098.003 (Account Manipulation - Additional Cloud
+  Roles) — vecteur classique post-compromise dans les tenants M365/Azure.
+references:
+  - https://attack.mitre.org/techniques/T1098/003/
+  - https://learn.microsoft.com/azure/active-directory/roles/permissions-reference
+  - https://learn.microsoft.com/azure/active-directory/fundamentals/security-operations-privileged-accounts
+  - https://www.invictus-ir.com/news/incident-response-in-microsoft-365
+author: SOC Detection Engineering Team
+date: 2026/04/29
+modified: 2026/04/29
+tags:
+  - attack.persistence
+  - attack.privilege_escalation
+  - attack.t1098
+  - attack.t1098.003
+logsource:
+  product: azure
+  service: auditlogs
+detection:
+  selection_role_op:
+    operationName:
+      - 'Add member to role'
+      - 'Add eligible member to role'
+      - 'Add member to role completed (PIM activation)'
+      - 'Add member to role outside of PIM (permanent)'
+  selection_privileged_role:
+    targetResources.modifiedProperties.newValue|contains:
+      - 'Global Administrator'
+      - 'Company Administrator'
+      - 'Privileged Role Administrator'
+      - 'Privileged Authentication Administrator'
+      - 'Application Administrator'
+      - 'Cloud Application Administrator'
+      - 'User Administrator'
+      - 'Exchange Administrator'
+      - 'SharePoint Administrator'
+      - 'Conditional Access Administrator'
+      - 'Security Administrator'
+      - 'Hybrid Identity Administrator'
+      - 'Partner Tier2 Support'
+  filter_pim_eligibility:
+    initiatedBy.user.userPrincipalName|endswith: '@MS-PIM'
+  filter_pim_activation:
+    operationName: 'Add member to role completed (PIM activation)'
+  condition: selection_role_op and selection_privileged_role and not (filter_pim_eligibility or filter_pim_activation)
+fields:
+  - operationName
+  - initiatedBy.user.userPrincipalName
+  - initiatedBy.user.id
+  - initiatedBy.app.appId
+  - targetResources
+  - result
+  - resultReason
+  - additionalDetails
+  - correlationId
+  - ipAddress
+falsepositives:
+  - Onboarding légitime d'un nouvel administrateur (à corréler avec ITSM/ticket)
+  - Provisioning automatisé via SCIM/Workday (à mettre en allowlist par appId)
+  - Activations PIM légitimes (déjà filtrées par la règle)
+level: critical

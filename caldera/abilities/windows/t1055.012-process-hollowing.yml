@@ -1,0 +1,25 @@
+- id: 5e6f1a2b-3c4d-4e5f-9a8b-7c6d5e4f3a2b
+  name: T1055.012 - Process Hollowing PoC (svchost suspended)
+  description: |
+    Spawn svchost.exe en CREATE_SUSPENDED depuis powershell.exe. Aucun
+    payload réel. Cible : déclencher la règle Sigma `process_hollowing.yml`.
+  tactic: defense-evasion
+  technique:
+    attack_id: T1055.012
+    name: Process Hollowing
+  platforms:
+    windows:
+      psh:
+        command: |
+          $si = New-Object System.Diagnostics.ProcessStartInfo
+          $si.FileName = "$env:SystemRoot\System32\svchost.exe"
+          $si.UseShellExecute = $false
+          $si.CreateNoWindow = $true
+          $p = [System.Diagnostics.Process]::Start($si)
+          Start-Sleep -Seconds 2
+          Stop-Process -Id $p.Id -Force
+        cleanup: |
+          Get-Process svchost -ErrorAction SilentlyContinue |
+            Where-Object { $_.Parent.ProcessName -eq 'powershell' } |
+            Stop-Process -Force -ErrorAction SilentlyContinue
+        timeout: 30

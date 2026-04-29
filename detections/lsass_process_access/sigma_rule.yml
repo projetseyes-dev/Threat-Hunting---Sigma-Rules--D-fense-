@@ -1,0 +1,64 @@
+title: Suspicious LSASS Process Access (Sysmon EID 10)
+id: 7f9c0d2a-1b3c-4d5e-9a0b-1c2d3e4f5a6b
+status: experimental
+description: |
+  Détecte des accès suspects au processus lsass.exe via Sysmon EventID 10
+  (ProcessAccess). Les flags GrantedAccess correspondent à des appels typiques
+  de lecture mémoire/dump (MiniDumpWriteDump), pouvant être utilisés pour
+  injection, vol de credentials ou préparation à Mimikatz.
+references:
+  - https://attack.mitre.org/techniques/T1003/001/
+  - https://blog.f-secure.com/detecting-lsass-dump-via-comsvcs-dll/
+author: SOC Detection Engineering Team
+date: 2026/04/29
+modified: 2026/04/29
+tags:
+  - attack.defense_evasion
+  - attack.credential_access
+  - attack.t1003
+  - attack.t1003.001
+logsource:
+  product: windows
+  category: process_access
+detection:
+  selection_target:
+    TargetImage|endswith: '\lsass.exe'
+  selection_access_mask:
+    GrantedAccess:
+      - '0x1010'
+      - '0x1410'
+      - '0x1438'
+      - '0x143A'
+      - '0x1FFFFF'
+      - '0x101010'
+      - '0x1F1FFF'
+      - '0x1F2FFF'
+      - '0x1F3FFF'
+  filter_legit_edr_sources:
+    SourceImage|contains:
+      - '\Program Files\Windows Defender\'
+      - '\Program Files\CrowdStrike\'
+      - '\Program Files\SentinelOne\'
+      - '\Program Files\Cybereason\'
+      - '\Program Files\Carbon Black\'
+  filter_dump_tools:
+    SourceImage|endswith:
+      - '\rundll32.exe'
+      - '\procdump.exe'
+      - '\taskmgr.exe'
+  filter_dump_signature:
+    CallTrace|contains:
+      - 'MiniDumpWriteDump'
+      - 'comsvcs.dll'
+  condition: selection_target and selection_access_mask and not filter_legit_edr_sources and not (filter_dump_tools or filter_dump_signature)
+fields:
+  - SourceImage
+  - TargetImage
+  - GrantedAccess
+  - CallTrace
+  - User
+falsepositives:
+  - Outils de diagnostic/métriques légitimes (Process Explorer, EDR audit) à allowlister par hôte.
+  - Windows Error Reporting (WerFault) et processus système (cas à confirmer).
+level: critical
+

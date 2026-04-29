@@ -1,0 +1,83 @@
+title: Kubernetes Privileged Pod Creation with Host Mount or HostPID
+id: 1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f
+status: experimental
+description: |
+  Détecte la création d'un Pod Kubernetes avec des paramètres de breakout
+  hôte caractéristiques (T1610 / T1611) : `privileged: true`, `hostPID: true`,
+  `hostNetwork: true`, mount de `/` ou de docker.sock, ou ajout de
+  capabilities `SYS_ADMIN` / `NET_ADMIN`. Surveille les events `create` /
+  `update` Pod dans les K8s audit logs (audit.k8s.io/v1).
+references:
+  - https://attack.mitre.org/techniques/T1611/
+  - https://attack.mitre.org/techniques/T1610/
+  - https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/
+  - https://www.cyberark.com/resources/threat-research-blog/kubernetes-pod-escape-using-log-mounts
+author: SOC Detection Engineering Team
+date: 2026/04/29
+modified: 2026/04/29
+tags:
+  - attack.privilege_escalation
+  - attack.defense_evasion
+  - attack.t1611
+  - attack.t1610
+logsource:
+  product: kubernetes
+  service: audit
+detection:
+  selection_create_pod:
+    verb:
+      - 'create'
+      - 'update'
+      - 'patch'
+    objectRef.resource: 'pods'
+  selection_privileged:
+    requestObject.spec.containers.0.securityContext.privileged: true
+  selection_hostpid:
+    requestObject.spec.hostPID: true
+  selection_hostnet:
+    requestObject.spec.hostNetwork: true
+  selection_host_mount:
+    requestObject.spec.volumes.0.hostPath.path:
+      - '/'
+      - '/etc'
+      - '/var'
+      - '/var/run/docker.sock'
+      - '/var/lib/docker'
+      - '/var/lib/kubelet'
+      - '/proc'
+      - '/root'
+  selection_dangerous_caps:
+    requestObject.spec.containers.0.securityContext.capabilities.add|contains:
+      - 'SYS_ADMIN'
+      - 'NET_ADMIN'
+      - 'SYS_PTRACE'
+      - 'SYS_MODULE'
+      - 'DAC_READ_SEARCH'
+      - 'DAC_OVERRIDE'
+  filter_kube_system:
+    objectRef.namespace:
+      - 'kube-system'
+      - 'kube-public'
+      - 'kube-node-lease'
+    user.username|startswith:
+      - 'system:serviceaccount:kube-system:'
+      - 'system:node:'
+  filter_csi_drivers:
+    user.username|contains:
+      - ':csi-'
+      - 'cloud-controller-manager'
+  condition: selection_create_pod and (selection_privileged or selection_hostpid or selection_hostnet or selection_host_mount or selection_dangerous_caps) and not (filter_kube_system or filter_csi_drivers)
+fields:
+  - user.username
+  - user.groups
+  - sourceIPs
+  - userAgent
+  - objectRef.namespace
+  - objectRef.name
+  - requestObject.spec
+  - responseStatus.code
+falsepositives:
+  - DaemonSets d'observabilité (Falco, Datadog, Prometheus node-exporter) — à allowlister par SA
+  - CSI drivers et cloud controllers (déjà filtrés)
+  - Outils de debug en dev cluster (à profiler par namespace/SA)
+level: high

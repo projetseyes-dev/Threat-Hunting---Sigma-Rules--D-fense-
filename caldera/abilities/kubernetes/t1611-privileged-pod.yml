@@ -1,0 +1,41 @@
+- id: 2e3f4a5b-6c7d-4e8f-9a0b-1c2d3e4f5a6b
+  name: T1611 - Kubernetes Privileged Pod Creation
+  description: |
+    Crée un Pod avec privileged:true + hostPath:/ (escape direct sur le node).
+    Cible : déclencher la règle Sigma `k8s_privileged_pod_creation.yml`.
+
+    Prérequis : kubectl configuré avec un user disposant de pods/create dans
+    le namespace `atomic-redteam`. PodSecurityAdmission en mode `audit` ou
+    `warn` (sinon la création sera bloquée par l'admission).
+  tactic: privilege-escalation
+  technique:
+    attack_id: T1611
+    name: Escape to Host
+  platforms:
+    linux,darwin,windows:
+      sh:
+        command: |
+          kubectl create namespace atomic-redteam 2>/dev/null || true
+          cat <<'EOF' | kubectl apply -n atomic-redteam -f -
+          apiVersion: v1
+          kind: Pod
+          metadata:
+            name: caldera-t1611
+          spec:
+            containers:
+              - name: shell
+                image: alpine:3.19
+                command: ["sleep","30"]
+                securityContext:
+                  privileged: true
+                volumeMounts:
+                  - name: hostroot
+                    mountPath: /host
+            volumes:
+              - name: hostroot
+                hostPath:
+                  path: /
+          EOF
+        cleanup: |
+          kubectl delete pod caldera-t1611 -n atomic-redteam --force --grace-period=0 2>/dev/null || true
+        timeout: 60

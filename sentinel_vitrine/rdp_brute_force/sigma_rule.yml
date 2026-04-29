@@ -1,0 +1,46 @@
+title: RDP Brute Force - High Volume of Failed Logons Followed by Success
+id: 2a91f4b6-7c3d-4e1f-8b65-d9e4a8c7b612
+status: experimental
+description: |
+  Détecte une activité de brute force RDP (T1110.001) caractérisée par un grand
+  nombre d'échecs d'authentification (EID 4625, LogonType 10 ou 3) provenant
+  d'une même source IP en peu de temps.
+references:
+  - https://attack.mitre.org/techniques/T1110/001/
+author: SOC Detection Engineering Team
+date: 2026/04/29
+modified: 2026/04/29
+tags:
+  - attack.credential_access
+  - attack.initial_access
+  - attack.t1110
+  - attack.t1110.001
+logsource:
+  product: windows
+  service: security
+detection:
+  failed_logon:
+    EventID: 4625
+    LogonType:
+      - 10
+      - 3
+    Status:
+      - '0xC000006D'
+      - '0xC000006A'
+      - '0xC0000064'
+      - '0xC000015B'
+  filter_local:
+    IpAddress:
+      - '-'
+      - '127.0.0.1'
+      - '::1'
+      - 'LOCAL'
+  timeframe: 5m
+  condition: failed_logon and not filter_local | count(EventID) by IpAddress, TargetUserName > 20
+fields:
+  - IpAddress
+  - TargetUserName
+  - WorkstationName
+  - LogonType
+level: high
+

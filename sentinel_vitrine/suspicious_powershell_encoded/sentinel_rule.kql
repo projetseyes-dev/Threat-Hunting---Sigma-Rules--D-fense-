@@ -1,0 +1,35 @@
+// Suspicious PowerShell - Encoded Command and Obfuscation Patterns (T1059.001 / T1027)
+// Microsoft Sentinel (KQL) - demo
+//
+// Telemetry assumptions for the recruiter demo (matches our future samples/ JSON):
+// - Table: SecurityEvent
+// - Fields: TimeGenerated, Computer, EventID=4688,
+//           NewProcessName, CommandLine, ParentProcessName, Account
+
+let encoded_regex = @"(?i)\\s-(enc|e|ec|EncodedCommand)\\s";
+
+let bypass_flags = dynamic(["Bypass","-nop","-NoProfile","-WindowStyle Hidden","-w hidden","-ep bypass","-ExecutionPolicy unrestricted"]);
+
+let download_iex = dynamic(["DownloadString","DownloadFile","Invoke-WebRequest","Net.WebClient","IEX(","Invoke-Expression","iwr ","curl ","wget "]);
+
+let inmemory_flags = dynamic(["FromBase64String","[Reflection.Assembly]::Load","[System.Reflection.Assembly]::Load","System.Net.Sockets.TCPClient","IO.Compression.GzipStream"]);
+
+let legit_parent_paths = dynamic(["\\\\Windows\\\\CCM\\\\CcmExec.exe","\\\\Microsoft Monitoring Agent\\\\"]);
+
+SecurityEvent
+| where EventID == 4688
+| extend NewProcFile = tolower(tostring(extract(@"[^\\\\]+$", 0, tostring(NewProcessName))))
+| where NewProcFile in~ ("powershell.exe","pwsh.exe","powershell_ise.exe")
+| extend cl = tostring(CommandLine)
+| extend parent = tostring(ParentProcessName)
+| where
+    (cl matches regex encoded_regex)
+    or
+    (
+      cl has_any (bypass_flags)
+      and (cl has_any (download_iex) or cl has_any (inmemory_flags))
+    )
+| where not(parent has_any (legit_parent_paths))
+| project TimeGenerated, Computer, Account, NewProcessName, ParentProcessName, CommandLine
+| order by TimeGenerated desc
+

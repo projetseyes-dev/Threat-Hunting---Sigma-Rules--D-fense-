@@ -1,0 +1,39 @@
+title: DNS Beaconing - Suspicious Repetitive TXT/NULL Queries (Sysmon EID 22)
+id: 5d3c2b1a-0f9e-4d6c-8b7a-1c2d3e4f5a6b
+status: experimental
+description: |
+  Détecte du **DNS beaconing** (T1071.004) via Sysmon EventID 22 (DnsQuery)
+  caractérisé par des requêtes répétitives vers le même `QueryName`,
+  de type `TXT`/`NULL`, avec un label potentiellement long (encodage).
+references:
+  - https://attack.mitre.org/techniques/T1071/004/
+  - https://attack.mitre.org/techniques/T1048/003/
+author: SOC Detection Engineering Team
+date: 2026/04/29
+modified: 2026/04/29
+tags:
+  - attack.command_and_control
+  - attack.t1071
+  - attack.t1071.004
+  - attack.t1048.003
+logsource:
+  product: windows
+  category: dns_query
+detection:
+  selection_dns:
+    EventID: 22
+    QueryType:
+      - 'TXT'
+      - 'NULL'
+  selection_long_label:
+    QueryName|re: '^[A-Za-z0-9+/=_-]{30,}\\..+\\.[a-z]{2,10}$'
+  condition: selection_dns and selection_long_label | count() by Computer, QueryName > 15
+fields:
+  - QueryName
+  - QueryType
+  - Computer
+falsepositives:
+  - DNS legitimes avec enregistrements TXT (DNS challenge, verification, monitoring)
+  - Des environnements avec fortes charges de tests DNS (à valider avec baseline)
+level: high
+

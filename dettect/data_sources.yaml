@@ -1,0 +1,188 @@
+version: 1.2
+file_type: data-source-administration
+name: SOC Detection Engineering — Data Source Coverage
+domain: enterprise-attack
+systems:
+  - applicable_to:
+      - Windows Servers
+      - Windows Workstations
+    description: Endpoints Windows joints au domaine, configurés Sysmon + WEC.
+    platform:
+      - Windows
+  - applicable_to:
+      - Linux Servers
+    description: Serveurs Linux Production (RHEL, Ubuntu, Debian).
+    platform:
+      - Linux
+  - applicable_to:
+      - AWS Cloud Infrastructure
+    description: Comptes AWS multi-tenants avec CloudTrail multi-region + organization trail.
+    platform:
+      - IaaS
+
+data_sources:
+  - data_source_name: Process Creation
+    data_source:
+      - applicable_to:
+          - Windows Servers
+          - Windows Workstations
+        date_registered: 2026-01-15
+        date_connected: 2026-02-01
+        products:
+          - Sysmon EID 1
+          - Windows Security 4688
+        available_for_data_analytics: true
+        comment: "Process command line auditing activé via GPO."
+        data_quality:
+          device_completeness: 4
+          data_field_completeness: 5
+          timeliness: 5
+          consistency: 5
+          retention: 4
+      - applicable_to:
+          - Linux Servers
+        date_registered: 2026-03-01
+        date_connected: 2026-03-15
+        products:
+          - auditd execve
+          - osquery process_events
+        available_for_data_analytics: true
+        comment: "Règles auditd custom pour execve, fork, clone."
+        data_quality:
+          device_completeness: 3
+          data_field_completeness: 4
+          timeliness: 5
+          consistency: 4
+          retention: 4
+
+  - data_source_name: Process Access
+    data_source:
+      - applicable_to:
+          - Windows Servers
+          - Windows Workstations
+        date_registered: 2026-01-15
+        date_connected: 2026-02-01
+        products:
+          - Sysmon EID 10
+        available_for_data_analytics: true
+        comment: "EID 10 actif uniquement sur Tier 0 + DCs (volume contrôlé)."
+        data_quality:
+          device_completeness: 3
+          data_field_completeness: 5
+          timeliness: 5
+          consistency: 5
+          retention: 3
+
+  - data_source_name: Command Execution
+    data_source:
+      - applicable_to:
+          - Windows Servers
+          - Windows Workstations
+        date_registered: 2026-01-15
+        date_connected: 2026-02-01
+        products:
+          - PowerShell EID 4104 (Script Block Logging)
+          - PowerShell EID 4103 (Module Logging)
+        available_for_data_analytics: true
+        comment: "Script Block Logging activé GPO. Transcription sur Tier 0."
+        data_quality:
+          device_completeness: 5
+          data_field_completeness: 5
+          timeliness: 5
+          consistency: 5
+          retention: 4
+
+  - data_source_name: Logon Session
+    data_source:
+      - applicable_to:
+          - Windows Servers
+          - Windows Workstations
+        date_registered: 2026-01-15
+        date_connected: 2026-02-01
+        products:
+          - Windows Security 4624
+          - Windows Security 4625
+          - Windows Security 4634
+          - Windows Security 4647
+        available_for_data_analytics: true
+        comment: "Audit Logon/Logoff Success+Failure activé sur tout le parc."
+        data_quality:
+          device_completeness: 5
+          data_field_completeness: 5
+          timeliness: 5
+          consistency: 5
+          retention: 5
+
+  - data_source_name: Network Traffic
+    data_source:
+      - applicable_to:
+          - Windows Servers
+          - Windows Workstations
+        date_registered: 2026-01-15
+        date_connected: 2026-02-01
+        products:
+          - Sysmon EID 3
+          - EDR network telemetry
+        available_for_data_analytics: true
+        comment: "Sysmon EID 3 filtré pour limiter le volume."
+        data_quality:
+          device_completeness: 4
+          data_field_completeness: 4
+          timeliness: 5
+          consistency: 4
+          retention: 3
+
+  - data_source_name: Domain Name
+    data_source:
+      - applicable_to:
+          - Windows Servers
+          - Windows Workstations
+        date_registered: 2026-02-15
+        date_connected: 2026-03-01
+        products:
+          - Sysmon EID 22 (DnsQuery)
+          - Windows DNS Server logs
+          - Zeek dns.log
+        available_for_data_analytics: true
+        comment: "Sysmon EID 22 sur le parc + logs résolveur DNS interne."
+        data_quality:
+          device_completeness: 4
+          data_field_completeness: 5
+          timeliness: 5
+          consistency: 4
+          retention: 4
+
+  - data_source_name: Cloud Service Modification
+    data_source:
+      - applicable_to:
+          - AWS Cloud Infrastructure
+        date_registered: 2026-04-01
+        date_connected: 2026-04-15
+        products:
+          - AWS CloudTrail (organization trail)
+        available_for_data_analytics: true
+        comment: "Trail multi-region, multi-account, KMS encrypted, S3 + CloudWatch Logs."
+        data_quality:
+          device_completeness: 5
+          data_field_completeness: 5
+          timeliness: 4
+          consistency: 5
+          retention: 5
+
+  - data_source_name: Process (Linux)
+    data_source:
+      - applicable_to:
+          - Linux Servers
+        date_registered: 2026-03-01
+        date_connected: 2026-03-15
+        products:
+          - auditd
+          - Falco
+        available_for_data_analytics: true
+        comment: "auditd + Falco déployés sur les serveurs critiques."
+        data_quality:
+          device_completeness: 3
+          data_field_completeness: 4
+          timeliness: 5
+          consistency: 4
+          retention: 3

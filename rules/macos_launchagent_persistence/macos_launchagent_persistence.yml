@@ -1,0 +1,82 @@
+title: macOS Suspicious LaunchAgent or LaunchDaemon Persistence
+id: 9f0e1d2c-3b4a-4d5e-9c6b-7a8d9e0f1a2b
+status: experimental
+description: |
+  Détecte la création d'une persistance macOS via LaunchAgent / LaunchDaemon
+  (T1543.001 / T1543.004) : écriture d'un fichier .plist dans
+  ~/Library/LaunchAgents, /Library/LaunchAgents, /Library/LaunchDaemons, ou
+  appel à `launchctl load` / `launchctl bootstrap` avec un binaire situé hors
+  /Applications, /usr/bin, /usr/sbin. Utilise les events Endpoint Security
+  Framework (ESF) NOTIFY_CREATE et NOTIFY_EXEC (via SentinelOne, Crowdstrike,
+  Jamf Protect, Elastic Security, Falcon).
+references:
+  - https://attack.mitre.org/techniques/T1543/001/
+  - https://attack.mitre.org/techniques/T1543/004/
+  - https://www.sentinelone.com/labs/macos-malware-2023-a-deep-dive-into-emerging-trends-and-evolving-techniques/
+  - https://github.com/objective-see/KnockKnock
+  - https://www.elastic.co/security-labs/dprk-strikes-using-a-new-variant-of-rustbucket
+author: SOC Detection Engineering Team
+date: 2026/04/29
+modified: 2026/04/29
+tags:
+  - attack.persistence
+  - attack.privilege_escalation
+  - attack.t1543
+  - attack.t1543.001
+  - attack.t1543.004
+logsource:
+  product: macos
+  category: file_event
+detection:
+  selection_plist_create:
+    event_type:
+      - 'ES_EVENT_TYPE_NOTIFY_CREATE'
+      - 'ES_EVENT_TYPE_NOTIFY_WRITE'
+      - 'ES_EVENT_TYPE_NOTIFY_RENAME'
+    target_path|startswith:
+      - '/Users/'
+      - '/Library/LaunchAgents/'
+      - '/Library/LaunchDaemons/'
+      - '/System/Library/LaunchAgents/'
+      - '/System/Library/LaunchDaemons/'
+    target_path|contains: '/LaunchAgents/'
+  selection_plist_create_daemon:
+    event_type:
+      - 'ES_EVENT_TYPE_NOTIFY_CREATE'
+      - 'ES_EVENT_TYPE_NOTIFY_WRITE'
+      - 'ES_EVENT_TYPE_NOTIFY_RENAME'
+    target_path|startswith:
+      - '/Library/LaunchDaemons/'
+      - '/System/Library/LaunchDaemons/'
+  selection_plist_ext:
+    target_path|endswith: '.plist'
+  filter_legit_apple:
+    target_path|startswith:
+      - '/System/Library/LaunchAgents/com.apple.'
+      - '/System/Library/LaunchDaemons/com.apple.'
+    process_path|startswith:
+      - '/usr/sbin/installer'
+      - '/usr/libexec/'
+  filter_signed_pkg_install:
+    process_path|startswith:
+      - '/System/Library/CoreServices/Installer.app/'
+      - '/usr/sbin/softwareupdate'
+      - '/Library/Apple/System/Library/'
+  filter_jamf_mdm:
+    process_path|contains:
+      - 'jamf'
+      - '/Library/Application Support/JAMF/'
+  condition: ((selection_plist_create or selection_plist_create_daemon) and selection_plist_ext) and not (filter_legit_apple or filter_signed_pkg_install or filter_jamf_mdm)
+fields:
+  - target_path
+  - process_path
+  - process_command_line
+  - process_signing_id
+  - process_team_id
+  - process_is_platform_binary
+  - user_name
+falsepositives:
+  - Installeurs PKG signés Apple Developer ID légitimes (allowlister par team_id)
+  - Outils MDM (Jamf, Kandji, Mosyle) — déjà filtrés
+  - Apps mainstream (Slack, Zoom, 1Password) installant un LaunchAgent au premier lancement
+level: high

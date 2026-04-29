@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "scenario": "lsass_process_access",
+  "matches_rule": "detections/lsass_process_access/sentinel_rule.kql",
+  "tables": {
+    "SysmonEvent": [
+      {
+        "TimeGenerated": "2026-04-29T10:10:00Z",
+        "Computer": "WS01",
+        "EventID": 10,
+        "SourceImage": "C:\\Temp\\evil_injector.exe",
+        "TargetImage": "C:\\Windows\\System32\\lsass.exe",
+        "GrantedAccess": "0x1FFFFF",
+        "CallTrace": "UNKNOWN",
+        "User": "CORP\\alice"
+      }
+    ]
+  }
+}
+

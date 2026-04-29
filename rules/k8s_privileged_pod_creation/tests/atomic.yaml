@@ -1,0 +1,131 @@
+attack_technique: T1611
+display_name: Kubernetes Privileged Pod Creation
+related_sigma_rule: ../k8s_privileged_pod_creation.yml
+expected_alert_within_seconds: 60
+prerequisites:
+  - Cluster Kubernetes de LAB (kind, minikube, k3s, ou EKS dev)
+  - kubectl configuré avec un user/SA disposant de pods/create
+  - Audit logs activés et ingérés vers le SIEM (audit-policy.yaml configuré)
+  - PodSecurityAdmission en mode `audit` ou `warn` (sinon la création sera bloquée)
+warning: |
+  Tests à exécuter UNIQUEMENT sur cluster lab. Un pod privilégié = breakout
+  potentiel sur le node. Toujours nettoyer immédiatement.
+atomic_tests:
+  - name: Pod privileged:true classique
+    description: |
+      Crée un Pod alpine avec `privileged: true`. Test minimal pour vérifier
+      la sélection `selection_privileged`.
+    supported_platforms: [linux, macos, windows]
+    input_arguments:
+      namespace:
+        description: Namespace de test
+        type: string
+        default: "atomic-redteam"
+    executor:
+      name: bash
+      elevation_required: false
+      command: |
+        kubectl create namespace #{namespace} 2>/dev/null || true
+        cat <<'EOF' | kubectl apply -n #{namespace} -f -
+        apiVersion: v1
+        kind: Pod
+        metadata:
+          name: t1611-privileged
+        spec:
+          containers:
+            - name: shell
+              image: alpine:3.19
+              command: ["sleep","30"]
+              securityContext:
+                privileged: true
+        EOF
+        sleep 5
+      cleanup_command: |
+        kubectl delete pod t1611-privileged -n #{namespace} --force --grace-period=0 2>/dev/null || true
+
+  - name: Pod avec hostPath / mount root (escape direct)
+    description: |
+      Mount du filesystem root du node — vecteur d'évasion le plus utilisé
+      par les attaquants (lecture des credentials kubelet, modification du
+      filesystem hôte).
+    supported_platforms: [linux, macos, windows]
+    input_arguments:
+      namespace:
+        description: Namespace de test
+        type: string
+        default: "atomic-redteam"
+    executor:
+      name: bash
+      elevation_required: false
+      command: |
+        kubectl create namespace #{namespace} 2>/dev/null || true
+        cat <<'EOF' | kubectl apply -n #{namespace} -f -
+        apiVersion: v1
+        kind: Pod
+        metadata:
+          name: t1611-hostmount
+        spec:
+          containers:
+            - name: shell
+              image: alpine:3.19
+              command: ["sleep","30"]
+              volumeMounts:
+                - name: hostroot
+                  mountPath: /host
+          volumes:
+            - name: hostroot
+              hostPath:
+                path: /
+        EOF
+        sleep 5
+      cleanup_command: |
+        kubectl delete pod t1611-hostmount -n #{namespace} --force --grace-period=0 2>/dev/null || true
+
+  - name: Pod hostPID + capabilities SYS_ADMIN
+    description: |
+      Combinaison hostPID + SYS_ADMIN : permet de voir tous les processus
+      du node et d'effectuer des opérations admin (mount, ptrace, etc.).
+    supported_platforms: [linux, macos, windows]
+    input_arguments:
+      namespace:
+        description: Namespace de test
+        type: string
+        default: "atomic-redteam"
+    executor:
+      name: bash
+      elevation_required: false
+      command: |
+        kubectl create namespace #{namespace} 2>/dev/null || true
+        cat <<'EOF' | kubectl apply -n #{namespace} -f -
+        apiVersion: v1
+        kind: Pod
+        metadata:
+          name: t1611-hostpid-caps
+        spec:
+          hostPID: true
+          containers:
+            - name: shell
+              image: alpine:3.19
+              command: ["sleep","30"]
+              securityContext:
+                capabilities:
+                  add: ["SYS_ADMIN","SYS_PTRACE"]
+        EOF
+        sleep 5
+      cleanup_command: |
+        kubectl delete pod t1611-hostpid-caps -n #{namespace} --force --grace-period=0 2>/dev/null || true
+        kubectl delete namespace #{namespace} 2>/dev/null || true
+validation_queries:
+  splunk: |
+    index=k8s_audit verb=create objectRef.resource=pods earliest=-15m
+    | spath path=requestObject.spec output=spec
+    | where match(spec, "(?i)(privileged.*true|hostPID.*true|/$|SYS_ADMIN)")
+  sentinel: |
+    KubernetesAuditLogs
+    | where TimeGenerated > ago(15m)
+    | where Verb == "create" and ObjectRef has "pods"
+    | where RequestObject has_any ("\"privileged\":true","\"hostPID\":true",
+                                    "SYS_ADMIN","docker.sock")
+references:
+  - https://github.com/redcanaryco/atomic-red-team/tree/master/atomics/T1611
+  - https://github.com/BishopFox/badPods

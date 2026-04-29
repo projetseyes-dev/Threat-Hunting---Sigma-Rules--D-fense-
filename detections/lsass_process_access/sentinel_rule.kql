@@ -1,0 +1,24 @@
+// Suspicious LSASS Process Access (Sysmon EID 10) - demo
+// Assumed table/fields in Sentinel:
+// - Table: SysmonEvent
+// - Fields: TimeGenerated, Computer, EventID, SourceImage, TargetImage, GrantedAccess, CallTrace, User
+
+SysmonEvent
+| where EventID == 10
+| where tostring(TargetImage) endswith @"\lsass.exe"
+| where tostring(GrantedAccess) in~ (
+    "0x1010","0x1410","0x1438","0x143A","0x1FFFFF",
+    "0x101010","0x1F1FFF","0x1F2FFF","0x1F3FFF"
+)
+| where not(tostring(SourceImage) has_any (
+    @"\Program Files\Windows Defender\",
+    @"\Program Files\CrowdStrike\",
+    @"\Program Files\SentinelOne\",
+    @"\Program Files\Cybereason\",
+    @"\Program Files\Carbon Black\"
+))
+| where not(tostring(SourceImage) has_any ("\\rundll32.exe","\\procdump.exe","\\taskmgr.exe"))
+| where not(tostring(CallTrace) has_any ("MiniDumpWriteDump","comsvcs.dll"))
+| project TimeGenerated, Computer, User, SourceImage, TargetImage, GrantedAccess, CallTrace
+| order by TimeGenerated desc
+

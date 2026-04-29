@@ -1,0 +1,26 @@
+- id: 8a9b0c1d-2e3f-4a5b-9c6d-7e8f9a0b1c2d
+  name: T1098.001 - AWS Create Access Key on Existing User
+  description: |
+    Crée une access key sur un utilisateur IAM cible existant — vecteur de
+    persistance et privesc le plus utilisé après compromission de credentials
+    AWS. Cible : déclencher la règle Sigma `aws_iam_persistence.yml`.
+  tactic: persistence
+  technique:
+    attack_id: T1098.001
+    name: Additional Cloud Credentials
+  requirements:
+    - plugin.stockpile.requirements.basic:
+        source: caldera.aws.target_user
+  platforms:
+    linux,darwin,windows:
+      sh:
+        command: |
+          aws iam create-access-key --user-name "lab-test-user"
+        cleanup: |
+          KEY_ID=$(aws iam list-access-keys --user-name lab-test-user \
+            --query 'AccessKeyMetadata[?CreateDate==`'$(date -u +%Y-%m-%d)'`].AccessKeyId' \
+            --output text)
+          for k in $KEY_ID; do
+            aws iam delete-access-key --user-name lab-test-user --access-key-id $k
+          done
+        timeout: 60

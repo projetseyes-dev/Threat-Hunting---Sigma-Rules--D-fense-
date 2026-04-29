@@ -1,0 +1,17 @@
+// DNS Beaconing (Sysmon EID 22) - Microsoft Sentinel (KQL) - demo
+// Assumed table/fields in Sentinel:
+// - Table: SysmonEvent
+// - Fields: TimeGenerated, Computer, EventID, QueryName, QueryType
+
+let window = 5m;
+
+SysmonEvent
+| where EventID == 22
+| where QueryType in~ ("TXT","NULL")
+| where QueryName matches regex @"^[A-Za-z0-9+/=_-]{30,}\\..+\\.[a-z]{2,10}$"
+| extend B = bin(TimeGenerated, window)
+| summarize Count = count() by Computer, QueryName, B
+| where Count > 15
+| project TimeGenerated = B, Computer, QueryName, QueryType, Count
+| order by Count desc, TimeGenerated desc
+

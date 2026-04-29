@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "scenario": "mimikatz_lsass_dump",
+  "matches_rule": "detections/mimikatz_lsass_dump/sentinel_rule.kql",
+  "tables": {
+    "SysmonEvent": [
+      {
+        "TimeGenerated": "2026-04-29T10:30:00Z",
+        "Computer": "WS04",
+        "EventID": 10,
+        "SourceImage": "C:\\Windows\\System32\\rundll32.exe",
+        "TargetImage": "C:\\Windows\\System32\\lsass.exe",
+        "GrantedAccess": "0x1FFFFF",
+        "CallTrace": "MiniDumpWriteDump comsvcs.dll",
+        "User": "CORP\\dave"
+      }
+    ]
+  }
+}
+

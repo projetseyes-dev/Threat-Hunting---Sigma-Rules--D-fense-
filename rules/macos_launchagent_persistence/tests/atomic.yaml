@@ -1,0 +1,113 @@
+attack_technique: T1543.001
+display_name: macOS LaunchAgent Persistence
+related_sigma_rule: ../macos_launchagent_persistence.yml
+expected_alert_within_seconds: 60
+prerequisites:
+  - macOS lab (12 Monterey ou ultérieur)
+  - EDR avec collecte ESF (Defender for Endpoint, SentinelOne, CrowdStrike, Jamf Protect)
+  - Privilèges sudo pour les tests `LaunchDaemon`
+warning: |
+  Tests à exécuter UNIQUEMENT sur Mac de lab. Toujours nettoyer immédiatement.
+atomic_tests:
+  - name: User-scope LaunchAgent (persistance utilisateur)
+    description: |
+      Crée un LaunchAgent dans ~/Library/LaunchAgents qui exécute /bin/sh
+      en boucle. Reproduit la signature des stealers macOS (Atomic, Pipemon).
+    supported_platforms: [macos]
+    input_arguments:
+      label:
+        description: Label du service (reverse-domain)
+        type: string
+        default: "com.atomic.redteam.t1543"
+    executor:
+      name: bash
+      elevation_required: false
+      command: |
+        PLIST="$HOME/Library/LaunchAgents/#{label}.plist"
+        cat <<EOF > "$PLIST"
+        <?xml version="1.0" encoding="UTF-8"?>
+        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+        <plist version="1.0">
+        <dict>
+          <key>Label</key>
+          <string>#{label}</string>
+          <key>ProgramArguments</key>
+          <array>
+            <string>/bin/sh</string>
+            <string>-c</string>
+            <string>echo atomic_test_t1543_001 \$(date) >> /tmp/t1543_test.log</string>
+          </array>
+          <key>RunAtLoad</key>
+          <true/>
+          <key>StartInterval</key>
+          <integer>60</integer>
+        </dict>
+        </plist>
+        EOF
+        launchctl load "$PLIST" 2>/dev/null || launchctl bootstrap gui/$(id -u) "$PLIST"
+      cleanup_command: |
+        PLIST="$HOME/Library/LaunchAgents/#{label}.plist"
+        launchctl unload "$PLIST" 2>/dev/null
+        launchctl bootout gui/$(id -u)/#{label} 2>/dev/null
+        rm -f "$PLIST" /tmp/t1543_test.log
+
+  - name: System-scope LaunchDaemon (persistance root)
+    description: |
+      Crée un LaunchDaemon dans /Library/LaunchDaemons (requiert sudo) qui
+      exécute en root. Reproduit la persistance des malwares targetting macOS
+      Apple Silicon (KandyKorn, RustBucket).
+    supported_platforms: [macos]
+    input_arguments:
+      label:
+        description: Label du service
+        type: string
+        default: "com.atomic.redteam.t1543d"
+    executor:
+      name: bash
+      elevation_required: true
+      command: |
+        PLIST="/Library/LaunchDaemons/#{label}.plist"
+        sudo tee "$PLIST" > /dev/null <<EOF
+        <?xml version="1.0" encoding="UTF-8"?>
+        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+        <plist version="1.0">
+        <dict>
+          <key>Label</key>
+          <string>#{label}</string>
+          <key>ProgramArguments</key>
+          <array>
+            <string>/bin/sh</string>
+            <string>-c</string>
+            <string>echo atomic_test_t1543_004_root \$(date) >> /tmp/t1543d_test.log</string>
+          </array>
+          <key>RunAtLoad</key>
+          <true/>
+        </dict>
+        </plist>
+        EOF
+        sudo chown root:wheel "$PLIST"
+        sudo chmod 644 "$PLIST"
+        sudo launchctl load "$PLIST"
+      cleanup_command: |
+        PLIST="/Library/LaunchDaemons/#{label}.plist"
+        sudo launchctl unload "$PLIST" 2>/dev/null
+        sudo launchctl bootout system/#{label} 2>/dev/null
+        sudo rm -f "$PLIST" /tmp/t1543d_test.log
+validation_queries:
+  splunk: |
+    index=macos_esf event_type IN ("ES_EVENT_TYPE_NOTIFY_CREATE","ES_EVENT_TYPE_NOTIFY_WRITE")
+    target_path IN ("*/LaunchAgents/*","/Library/LaunchDaemons/*")
+    target_path="*.plist"
+    earliest=-15m
+  sentinel: |
+    DeviceFileEvents
+    | where Timestamp > ago(15m)
+    | where FolderPath has_any ("/Library/LaunchAgents","/Library/LaunchDaemons")
+    | where FileName endswith ".plist"
+    | project Timestamp, DeviceName, FolderPath, FileName,
+              InitiatingProcessFileName, InitiatingProcessCommandLine,
+              InitiatingProcessSignatureStatus
+references:
+  - https://github.com/redcanaryco/atomic-red-team/tree/master/atomics/T1543.001
+  - https://taomm.org/
+  - https://objective-see.org/tools.html

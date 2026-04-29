@@ -1,0 +1,75 @@
+title: AWS IAM Persistence - Backdoor Access Key or Login Profile Created
+id: 6e1f2d3c-4b5a-4c7d-8e9f-0a1b2c3d4e5f
+status: experimental
+description: |
+  Détecte la création d'une persistance IAM dans AWS (T1098.001 / T1136.003)
+  par un attaquant ayant compromis des credentials privilégiés : création
+  d'une nouvelle access key sur un utilisateur existant, attachement d'une
+  policy AdministratorAccess, création d'un login profile sur un compte
+  service, ou ajout d'un utilisateur au groupe Administrators. Surveillance
+  via CloudTrail (eventName).
+references:
+  - https://attack.mitre.org/techniques/T1098/001/
+  - https://attack.mitre.org/techniques/T1136/003/
+  - https://docs.aws.amazon.com/IAM/latest/UserGuide/cloudtrail-integration.html
+  - https://www.invictus-ir.com/news/the-curious-case-of-dangerdev-protonmail-me
+author: SOC Detection Engineering Team
+date: 2026/04/29
+modified: 2026/04/29
+tags:
+  - attack.persistence
+  - attack.privilege_escalation
+  - attack.t1098
+  - attack.t1098.001
+  - attack.t1136
+  - attack.t1136.003
+logsource:
+  product: aws
+  service: cloudtrail
+detection:
+  selection_iam_changes:
+    eventSource: 'iam.amazonaws.com'
+    eventName:
+      - 'CreateAccessKey'
+      - 'CreateLoginProfile'
+      - 'UpdateLoginProfile'
+      - 'AttachUserPolicy'
+      - 'AttachGroupPolicy'
+      - 'AttachRolePolicy'
+      - 'PutUserPolicy'
+      - 'AddUserToGroup'
+      - 'CreateUser'
+      - 'CreateRole'
+  selection_admin_policy:
+    requestParameters.policyArn|contains:
+      - ':policy/AdministratorAccess'
+      - ':policy/IAMFullAccess'
+      - ':policy/PowerUserAccess'
+      - ':policy/AmazonS3FullAccess'
+  filter_legit_terraform:
+    userIdentity.userName|startswith:
+      - 'terraform-'
+      - 'pipeline-'
+    sourceIPAddress|contains:
+      - 'ec2.amazonaws.com'
+  filter_aws_console_root_legit:
+    userIdentity.type: 'Root'
+    userIdentity.invokedBy|contains:
+      - 'support.amazonaws.com'
+  condition: selection_iam_changes and (selection_admin_policy or 1 of selection_iam_changes) and not (filter_legit_terraform or filter_aws_console_root_legit)
+fields:
+  - eventTime
+  - eventName
+  - userIdentity.arn
+  - userIdentity.userName
+  - userIdentity.type
+  - sourceIPAddress
+  - userAgent
+  - requestParameters
+  - responseElements
+  - awsRegion
+falsepositives:
+  - Provisioning légitime via IaC (Terraform, CloudFormation) — à allowlister par rôle
+  - Onboarding d'un nouvel administrateur (à corréler avec ticket ITSM)
+  - Rotation programmée des access keys (planifier via tag/annotation)
+level: high

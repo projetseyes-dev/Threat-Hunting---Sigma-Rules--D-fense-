@@ -1,0 +1,25 @@
+id: 7e4b1a90-8d2c-4f3e-9b5a-1c6d7e8f9a0b
+name: SOC Detection Coverage — Quarterly Purple Team
+description: |
+  Profil adversaire qui rejoue toutes les TTPs couvertes par la bibliothèque
+  Sigma interne. Utilisé en Purple Team pour valider trimestriellement la
+  couverture des règles dans Splunk / Sentinel.
+
+  Plateformes : Windows, Linux, macOS, AWS, Azure, Kubernetes.
+  Durée moyenne d'exécution : 25 min sur un agent par OS.
+objective: 99c0c7a3-d3a4-4b3a-9d3a-1f3a8b7c6d5e
+tags:
+  - purple-team
+  - quarterly
+  - detection-validation
+atomic_ordering:
+  - 5e6f1a2b-3c4d-4e5f-9a8b-7c6d5e4f3a2b      # T1055.012 Process Hollowing
+  - a1b2c3d4-e5f6-4789-9012-3456789abcde      # T1059.001 Encoded PowerShell
+  - 7c8d9e0f-1a2b-4c3d-9e4f-5a6b7c8d9e0f      # T1110.001 RDP Brute Force
+  - 9e0f1a2b-3c4d-4e5f-9a8b-7c6d5e4f3a2b      # T1003.001 LSASS Dump
+  - 2b3c4d5e-6f7a-4b8c-9d0e-1f2a3b4c5d6e      # T1048.003 DNS Exfiltration
+  - 4c5d6e7f-8a9b-4c0d-9e1f-2a3b4c5d6e7f      # T1059.004 Linux Reverse Shell
+  - 6e7f8a9b-0c1d-4e2f-9a3b-4c5d6e7f8a9b      # T1543.001 macOS LaunchAgent
+  - 8a9b0c1d-2e3f-4a5b-9c6d-7e8f9a0b1c2d      # T1098.001 AWS IAM Persistence
+  - 0c1d2e3f-4a5b-4c6d-9e7f-8a9b0c1d2e3f      # T1098.003 Azure AAD Role
+  - 2e3f4a5b-6c7d-4e8f-9a0b-1c2d3e4f5a6b      # T1611    K8s Privileged Pod

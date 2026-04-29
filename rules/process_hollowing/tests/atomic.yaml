@@ -1,0 +1,53 @@
+attack_technique: T1055.012
+display_name: Process Hollowing
+related_sigma_rule: ../process_hollowing.yml
+expected_alert_within_seconds: 60
+prerequisites:
+  - Windows 10/11 (lab isolé, hors AD prod)
+  - Sysmon installé avec config Olaf Hartong / SwiftOnSecurity
+  - EDR en mode audit (sinon il bloquera le test)
+atomic_tests:
+  - name: Process Hollowing via PowerShell + svchost (PoC inoffensif)
+    description: |
+      Spawne svchost.exe en mode CREATE_SUSPENDED depuis powershell.exe.
+      Aucun payload réel n'est injecté ; l'objectif est de déclencher
+      uniquement la sélection de la règle (parent anormal + cible canonique).
+    supported_platforms: [windows]
+    executor:
+      name: powershell
+      elevation_required: false
+      command: |
+        $si = New-Object System.Diagnostics.ProcessStartInfo
+        $si.FileName = "$env:SystemRoot\System32\svchost.exe"
+        $si.UseShellExecute = $false
+        $si.CreateNoWindow = $true
+        $p = [System.Diagnostics.Process]::Start($si)
+        Start-Sleep -Seconds 2
+        Stop-Process -Id $p.Id -Force
+      cleanup_command: |
+        Get-Process svchost -ErrorAction SilentlyContinue |
+          Where-Object { $_.Parent.ProcessName -eq 'powershell' } |
+          Stop-Process -Force -ErrorAction SilentlyContinue
+
+  - name: PE-sieve baseline scan (validation côté détection)
+    description: |
+      Scanne tous les processus avec PE-sieve pour vérifier qu'aucun
+      hollowing résiduel ne subsiste après le test.
+    supported_platforms: [windows]
+    executor:
+      name: command_prompt
+      elevation_required: true
+      command: |
+        pe-sieve64.exe /scan_dirs 1
+validation_queries:
+  splunk: |
+    index=sysmon EventCode=1 Image="*\\svchost.exe" ParentImage="*\\powershell.exe"
+    | stats count by host, _time
+  sentinel: |
+    DeviceProcessEvents
+    | where FileName =~ "svchost.exe"
+      and InitiatingProcessFileName =~ "powershell.exe"
+    | summarize count() by DeviceName, bin(Timestamp, 5m)
+references:
+  - https://github.com/redcanaryco/atomic-red-team/blob/master/atomics/T1055.012/T1055.012.md
+  - https://github.com/hasherezade/pe-sieve

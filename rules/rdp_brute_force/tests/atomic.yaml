@@ -1,0 +1,62 @@
+attack_technique: T1110.001
+display_name: RDP Brute Force
+related_sigma_rule: ../rdp_brute_force.yml
+expected_alert_within_seconds: 300
+prerequisites:
+  - Lab isolé avec un Windows Server exposant RDP (3389/tcp)
+  - Audit "Logon Failures" activé (GPO : Audit Policy → Account Logon)
+  - Une IP source contrôlée pour le test
+atomic_tests:
+  - name: Simulation password spraying RDP (Hydra)
+    description: |
+      Effectue 30+ tentatives d'authentification RDP avec un mot de passe
+      invalide pour générer des EID 4625 LogonType 10 et déclencher la règle.
+      Utiliser SEULEMENT en environnement de test contrôlé.
+    supported_platforms: [linux, macos]
+    input_arguments:
+      target_host:
+        description: IP cible du serveur RDP de lab
+        type: string
+        default: "10.10.10.50"
+      user_list:
+        description: Fichier de comptes
+        type: path
+        default: "/tmp/users.txt"
+    executor:
+      name: bash
+      elevation_required: true
+      command: |
+        printf "administrator\nadmin\nguest\nuser\nbackup\n" > #{user_list}
+        hydra -L #{user_list} -p 'WrongPassword!' rdp://#{target_host} \
+          -t 4 -V -e nsr 2>&1 | tee /tmp/hydra_rdp.log
+      cleanup_command: rm -f #{user_list} /tmp/hydra_rdp.log
+
+  - name: Simulation brute force via PowerShell (sans outil externe)
+    description: |
+      Génère 25 EID 4625 en moins de 5 minutes contre le poste local
+      via une boucle de NetUseAdd avec un mot de passe invalide.
+    supported_platforms: [windows]
+    executor:
+      name: powershell
+      elevation_required: false
+      command: |
+        for ($i=1; $i -le 25; $i++) {
+          cmdkey /add:$env:COMPUTERNAME /user:bogus_user_$i /pass:WrongPassword
+          net use \\$env:COMPUTERNAME /user:bogus_user_$i WrongPassword 2>$null
+          cmdkey /delete:$env:COMPUTERNAME 2>$null
+          Start-Sleep -Milliseconds 200
+        }
+validation_queries:
+  splunk: |
+    index=wineventlog EventCode=4625 LogonType IN (10,3) earliest=-15m
+    | stats count by IpAddress, TargetUserName
+    | where count > 20
+  sentinel: |
+    SecurityEvent
+    | where TimeGenerated > ago(15m)
+    | where EventID == 4625 and LogonType in (10,3)
+    | summarize Failures=count() by IpAddress, TargetUserName
+    | where Failures > 20
+references:
+  - https://github.com/redcanaryco/atomic-red-team/tree/master/atomics/T1110.001
+  - https://attack.mitre.org/techniques/T1110/001/

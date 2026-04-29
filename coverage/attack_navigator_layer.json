@@ -1,0 +1,513 @@
+{
+  "name": "SOC Detection Coverage",
+  "versions": {
+    "attack": "14",
+    "navigator": "5.0.0",
+    "layer": "4.5"
+  },
+  "domain": "enterprise-attack",
+  "description": "Couverture de détection générée à partir des règles Sigma internes. Score = sévérité maximale par technique.",
+  "filters": {
+    "platforms": [
+      "Windows",
+      "Linux",
+      "macOS",
+      "IaaS",
+      "Office 365"
+    ]
+  },
+  "sorting": 3,
+  "layout": {
+    "layout": "side",
+    "showName": true,
+    "showID": true,
+    "showAggregateScores": true,
+    "countUnscored": false,
+    "aggregateFunction": "max"
+  },
+  "hideDisabled": false,
+  "techniques": [
+    {
+      "techniqueID": "T1003",
+      "score": 100,
+      "color": "",
+      "comment": "1 règle(s) Sigma :\n  - [CRITICAL] Credential Dumping - Suspicious LSASS Process Access (rules/credential_dumping_lsass/credential_dumping_lsass.yml)\n    Playbook: rules/credential_dumping_lsass/playbook.md",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "rules",
+          "value": "1"
+        },
+        {
+          "name": "max_severity",
+          "value": "critical"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T1003.001",
+      "score": 100,
+      "color": "",
+      "comment": "1 règle(s) Sigma :\n  - [CRITICAL] Credential Dumping - Suspicious LSASS Process Access (rules/credential_dumping_lsass/credential_dumping_lsass.yml)\n    Playbook: rules/credential_dumping_lsass/playbook.md",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "rules",
+          "value": "1"
+        },
+        {
+          "name": "max_severity",
+          "value": "critical"
+        }
+      ],
+      "showSubtechniques": true
+    },
+    {
+      "techniqueID": "T1027",
+      "score": 75,
+      "color": "",
+      "comment": "1 règle(s) Sigma :\n  - [HIGH] Suspicious PowerShell - Encoded Command and Obfuscation Patterns (rules/suspicious_powershell_encoded/suspicious_powershell_encoded.yml)\n    Playbook: rules/suspicious_powershell_encoded/playbook.md",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "rules",
+          "value": "1"
+        },
+        {
+          "name": "max_severity",
+          "value": "high"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T1048",
+      "score": 75,
+      "color": "",
+      "comment": "1 règle(s) Sigma :\n  - [HIGH] DNS Exfiltration - Long Subdomains and High Query Volume (rules/dns_exfiltration/dns_exfiltration.yml)\n    Playbook: rules/dns_exfiltration/playbook.md",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "rules",
+          "value": "1"
+        },
+        {
+          "name": "max_severity",
+          "value": "high"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T1048.003",
+      "score": 75,
+      "color": "",
+      "comment": "1 règle(s) Sigma :\n  - [HIGH] DNS Exfiltration - Long Subdomains and High Query Volume (rules/dns_exfiltration/dns_exfiltration.yml)\n    Playbook: rules/dns_exfiltration/playbook.md",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "rules",
+          "value": "1"
+        },
+        {
+          "name": "max_severity",
+          "value": "high"
+        }
+      ],
+      "showSubtechniques": true
+    },
+    {
+      "techniqueID": "T1055",
+      "score": 75,
+      "color": "",
+      "comment": "1 règle(s) Sigma :\n  - [HIGH] Process Hollowing - Suspicious Image Mismatch in Legitimate Process (rules/process_hollowing/process_hollowing.yml)\n    Playbook: rules/process_hollowing/playbook.md",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "rules",
+          "value": "1"
+        },
+        {
+          "name": "max_severity",
+          "value": "high"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T1055.012",
+      "score": 75,
+      "color": "",
+      "comment": "1 règle(s) Sigma :\n  - [HIGH] Process Hollowing - Suspicious Image Mismatch in Legitimate Process (rules/process_hollowing/process_hollowing.yml)\n    Playbook: rules/process_hollowing/playbook.md",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "rules",
+          "value": "1"
+        },
+        {
+          "name": "max_severity",
+          "value": "high"
+        }
+      ],
+      "showSubtechniques": true
+    },
+    {
+      "techniqueID": "T1059",
+      "score": 75,
+      "color": "",
+      "comment": "2 règle(s) Sigma :\n  - [HIGH] Linux Reverse Shell - Suspicious Network Redirection from Shell (rules/linux_reverse_shell/linux_reverse_shell.yml)\n    Playbook: rules/linux_reverse_shell/playbook.md\n  - [HIGH] Suspicious PowerShell - Encoded Command and Obfuscation Patterns (rules/suspicious_powershell_encoded/suspicious_powershell_encoded.yml)\n    Playbook: rules/suspicious_powershell_encoded/playbook.md",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "rules",
+          "value": "2"
+        },
+        {
+          "name": "max_severity",
+          "value": "high"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T1059.001",
+      "score": 75,
+      "color": "",
+      "comment": "1 règle(s) Sigma :\n  - [HIGH] Suspicious PowerShell - Encoded Command and Obfuscation Patterns (rules/suspicious_powershell_encoded/suspicious_powershell_encoded.yml)\n    Playbook: rules/suspicious_powershell_encoded/playbook.md",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "rules",
+          "value": "1"
+        },
+        {
+          "name": "max_severity",
+          "value": "high"
+        }
+      ],
+      "showSubtechniques": true
+    },
+    {
+      "techniqueID": "T1059.004",
+      "score": 75,
+      "color": "",
+      "comment": "1 règle(s) Sigma :\n  - [HIGH] Linux Reverse Shell - Suspicious Network Redirection from Shell (rules/linux_reverse_shell/linux_reverse_shell.yml)\n    Playbook: rules/linux_reverse_shell/playbook.md",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "rules",
+          "value": "1"
+        },
+        {
+          "name": "max_severity",
+          "value": "high"
+        }
+      ],
+      "showSubtechniques": true
+    },
+    {
+      "techniqueID": "T1071",
+      "score": 75,
+      "color": "",
+      "comment": "2 règle(s) Sigma :\n  - [HIGH] DNS Exfiltration - Long Subdomains and High Query Volume (rules/dns_exfiltration/dns_exfiltration.yml)\n    Playbook: rules/dns_exfiltration/playbook.md\n  - [HIGH] Linux Reverse Shell - Suspicious Network Redirection from Shell (rules/linux_reverse_shell/linux_reverse_shell.yml)\n    Playbook: rules/linux_reverse_shell/playbook.md",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "rules",
+          "value": "2"
+        },
+        {
+          "name": "max_severity",
+          "value": "high"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T1071.004",
+      "score": 75,
+      "color": "",
+      "comment": "1 règle(s) Sigma :\n  - [HIGH] DNS Exfiltration - Long Subdomains and High Query Volume (rules/dns_exfiltration/dns_exfiltration.yml)\n    Playbook: rules/dns_exfiltration/playbook.md",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "rules",
+          "value": "1"
+        },
+        {
+          "name": "max_severity",
+          "value": "high"
+        }
+      ],
+      "showSubtechniques": true
+    },
+    {
+      "techniqueID": "T1098",
+      "score": 100,
+      "color": "",
+      "comment": "2 règle(s) Sigma :\n  - [HIGH] AWS IAM Persistence - Backdoor Access Key or Login Profile Created (rules/aws_iam_persistence/aws_iam_persistence.yml)\n    Playbook: rules/aws_iam_persistence/playbook.md\n  - [CRITICAL] Azure AD Privileged Role Assignment Outside PIM Workflow (rules/azure_privileged_role_assignment/azure_privileged_role_assignment.yml)\n    Playbook: rules/azure_privileged_role_assignment/playbook.md",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "rules",
+          "value": "2"
+        },
+        {
+          "name": "max_severity",
+          "value": "critical"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T1098.001",
+      "score": 75,
+      "color": "",
+      "comment": "1 règle(s) Sigma :\n  - [HIGH] AWS IAM Persistence - Backdoor Access Key or Login Profile Created (rules/aws_iam_persistence/aws_iam_persistence.yml)\n    Playbook: rules/aws_iam_persistence/playbook.md",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "rules",
+          "value": "1"
+        },
+        {
+          "name": "max_severity",
+          "value": "high"
+        }
+      ],
+      "showSubtechniques": true
+    },
+    {
+      "techniqueID": "T1098.003",
+      "score": 100,
+      "color": "",
+      "comment": "1 règle(s) Sigma :\n  - [CRITICAL] Azure AD Privileged Role Assignment Outside PIM Workflow (rules/azure_privileged_role_assignment/azure_privileged_role_assignment.yml)\n    Playbook: rules/azure_privileged_role_assignment/playbook.md",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "rules",
+          "value": "1"
+        },
+        {
+          "name": "max_severity",
+          "value": "critical"
+        }
+      ],
+      "showSubtechniques": true
+    },
+    {
+      "techniqueID": "T1110",
+      "score": 75,
+      "color": "",
+      "comment": "1 règle(s) Sigma :\n  - [HIGH] RDP Brute Force - High Volume of Failed Logons Followed by Success (rules/rdp_brute_force/rdp_brute_force.yml)\n    Playbook: rules/rdp_brute_force/playbook.md",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "rules",
+          "value": "1"
+        },
+        {
+          "name": "max_severity",
+          "value": "high"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T1110.001",
+      "score": 75,
+      "color": "",
+      "comment": "1 règle(s) Sigma :\n  - [HIGH] RDP Brute Force - High Volume of Failed Logons Followed by Success (rules/rdp_brute_force/rdp_brute_force.yml)\n    Playbook: rules/rdp_brute_force/playbook.md",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "rules",
+          "value": "1"
+        },
+        {
+          "name": "max_severity",
+          "value": "high"
+        }
+      ],
+      "showSubtechniques": true
+    },
+    {
+      "techniqueID": "T1136",
+      "score": 75,
+      "color": "",
+      "comment": "1 règle(s) Sigma :\n  - [HIGH] AWS IAM Persistence - Backdoor Access Key or Login Profile Created (rules/aws_iam_persistence/aws_iam_persistence.yml)\n    Playbook: rules/aws_iam_persistence/playbook.md",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "rules",
+          "value": "1"
+        },
+        {
+          "name": "max_severity",
+          "value": "high"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T1136.003",
+      "score": 75,
+      "color": "",
+      "comment": "1 règle(s) Sigma :\n  - [HIGH] AWS IAM Persistence - Backdoor Access Key or Login Profile Created (rules/aws_iam_persistence/aws_iam_persistence.yml)\n    Playbook: rules/aws_iam_persistence/playbook.md",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "rules",
+          "value": "1"
+        },
+        {
+          "name": "max_severity",
+          "value": "high"
+        }
+      ],
+      "showSubtechniques": true
+    },
+    {
+      "techniqueID": "T1543",
+      "score": 75,
+      "color": "",
+      "comment": "1 règle(s) Sigma :\n  - [HIGH] macOS Suspicious LaunchAgent or LaunchDaemon Persistence (rules/macos_launchagent_persistence/macos_launchagent_persistence.yml)\n    Playbook: rules/macos_launchagent_persistence/playbook.md",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "rules",
+          "value": "1"
+        },
+        {
+          "name": "max_severity",
+          "value": "high"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T1543.001",
+      "score": 75,
+      "color": "",
+      "comment": "1 règle(s) Sigma :\n  - [HIGH] macOS Suspicious LaunchAgent or LaunchDaemon Persistence (rules/macos_launchagent_persistence/macos_launchagent_persistence.yml)\n    Playbook: rules/macos_launchagent_persistence/playbook.md",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "rules",
+          "value": "1"
+        },
+        {
+          "name": "max_severity",
+          "value": "high"
+        }
+      ],
+      "showSubtechniques": true
+    },
+    {
+      "techniqueID": "T1543.004",
+      "score": 75,
+      "color": "",
+      "comment": "1 règle(s) Sigma :\n  - [HIGH] macOS Suspicious LaunchAgent or LaunchDaemon Persistence (rules/macos_launchagent_persistence/macos_launchagent_persistence.yml)\n    Playbook: rules/macos_launchagent_persistence/playbook.md",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "rules",
+          "value": "1"
+        },
+        {
+          "name": "max_severity",
+          "value": "high"
+        }
+      ],
+      "showSubtechniques": true
+    },
+    {
+      "techniqueID": "T1610",
+      "score": 75,
+      "color": "",
+      "comment": "1 règle(s) Sigma :\n  - [HIGH] Kubernetes Privileged Pod Creation with Host Mount or HostPID (rules/k8s_privileged_pod_creation/k8s_privileged_pod_creation.yml)\n    Playbook: rules/k8s_privileged_pod_creation/playbook.md",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "rules",
+          "value": "1"
+        },
+        {
+          "name": "max_severity",
+          "value": "high"
+        }
+      ],
+      "showSubtechniques": false
+    },
+    {
+      "techniqueID": "T1611",
+      "score": 75,
+      "color": "",
+      "comment": "1 règle(s) Sigma :\n  - [HIGH] Kubernetes Privileged Pod Creation with Host Mount or HostPID (rules/k8s_privileged_pod_creation/k8s_privileged_pod_creation.yml)\n    Playbook: rules/k8s_privileged_pod_creation/playbook.md",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "rules",
+          "value": "1"
+        },
+        {
+          "name": "max_severity",
+          "value": "high"
+        }
+      ],
+      "showSubtechniques": false
+    }
+  ],
+  "gradient": {
+    "colors": [
+      "#fff7bc",
+      "#fec44f",
+      "#d95f0e",
+      "#993404"
+    ],
+    "minValue": 0,
+    "maxValue": 100
+  },
+  "legendItems": [
+    {
+      "label": "informational (10)",
+      "color": "#fff7bc"
+    },
+    {
+      "label": "low (25)",
+      "color": "#fec44f"
+    },
+    {
+      "label": "medium (50)",
+      "color": "#fe9929"
+    },
+    {
+      "label": "high (75)",
+      "color": "#d95f0e"
+    },
+    {
+      "label": "critical (100)",
+      "color": "#993404"
+    }
+  ],
+  "metadata": [
+    {
+      "name": "generator",
+      "value": "generate_navigator_layer.py"
+    },
+    {
+      "name": "rule_count",
+      "value": "10"
+    },
+    {
+      "name": "technique_count",
+      "value": "24"
+    }
+  ],
+  "showTacticRowBackground": true,
+  "tacticRowBackground": "#dddddd",
+  "selectTechniquesAcrossTactics": true,
+  "selectSubtechniquesWithParent": false
+}

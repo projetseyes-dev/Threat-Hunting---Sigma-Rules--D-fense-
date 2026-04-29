@@ -1,0 +1,61 @@
+title: DNS Exfiltration - Long Subdomains and High Query Volume
+id: 5b8c2e44-3fa1-4d6c-9e7b-8a1f2d3c4e05
+status: experimental
+description: |
+  Détecte une exfiltration de données via le protocole DNS (T1048.003 / T1071.004)
+  caractérisée par des sous-domaines anormalement longs et des QType inhabituels (TXT, NULL, CNAME).
+references:
+  - https://attack.mitre.org/techniques/T1048/003/
+  - https://attack.mitre.org/techniques/T1071/004/
+author: SOC Detection Engineering Team
+date: 2026/04/29
+modified: 2026/04/29
+tags:
+  - attack.exfiltration
+  - attack.command_and_control
+  - attack.t1048
+  - attack.t1048.003
+  - attack.t1071
+  - attack.t1071.004
+logsource:
+  product: windows
+  category: dns_query
+detection:
+  long_subdomain:
+    QueryName|re: '^[a-zA-Z0-9+/=_-]{50,}\..+\.[a-z]{2,10}$'
+  suspicious_qtype:
+    QueryType:
+      - 'TXT'
+      - 'NULL'
+      - 'CNAME'
+  high_entropy_pattern:
+    QueryName|re: '^[A-Za-z0-9]{30,}\..+'
+  filter_legit_domains:
+    QueryName|endswith:
+      - '.akamai.net'
+      - '.akamaiedge.net'
+      - '.cloudfront.net'
+      - '.azureedge.net'
+      - '.windowsupdate.com'
+      - '.office.com'
+      - '.office365.com'
+      - '.googleusercontent.com'
+      - '.gstatic.com'
+      - '.amazonaws.com'
+      - '.fastly.net'
+      - '.cdn.mozilla.net'
+      - '._tcp.local'
+      - '._udp.local'
+  filter_dnssec:
+    QueryName|contains:
+      - 'dnskey.'
+      - 'dnssec.'
+  condition: (long_subdomain or (high_entropy_pattern and suspicious_qtype)) and not (filter_legit_domains or filter_dnssec)
+fields:
+  - QueryName
+  - QueryType
+  - Image
+  - User
+  - DestinationIp
+level: high
+

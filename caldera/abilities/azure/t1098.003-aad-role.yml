@@ -1,0 +1,28 @@
+- id: 0c1d2e3f-4a5b-4c6d-9e7f-8a9b0c1d2e3f
+  name: T1098.003 - Azure AD Add Global Administrator role
+  description: |
+    Promouvoit un user de lab au rôle Global Administrator de manière
+    permanente (hors PIM). Cible : déclencher la règle Sigma
+    `azure_privileged_role_assignment.yml`.
+
+    Prérequis : Microsoft Graph PowerShell SDK + compte de test avec
+    Privileged Role Administrator.
+  tactic: persistence
+  technique:
+    attack_id: T1098.003
+    name: Additional Cloud Roles
+  platforms:
+    windows,linux,darwin:
+      psh,pwsh:
+        command: |
+          Connect-MgGraph -Scopes "RoleManagement.ReadWrite.Directory","User.Read.All" -NoWelcome
+          $role = Get-MgDirectoryRole -Filter "DisplayName eq 'Global Administrator'"
+          $user = Get-MgUser -UserId "lab-test-user@contoso.onmicrosoft.com"
+          $params = @{ "@odata.id" = "https://graph.microsoft.com/v1.0/directoryObjects/$($user.Id)" }
+          New-MgDirectoryRoleMemberByRef -DirectoryRoleId $role.Id -BodyParameter $params
+        cleanup: |
+          Connect-MgGraph -Scopes "RoleManagement.ReadWrite.Directory","User.Read.All" -NoWelcome
+          $role = Get-MgDirectoryRole -Filter "DisplayName eq 'Global Administrator'"
+          $user = Get-MgUser -UserId "lab-test-user@contoso.onmicrosoft.com"
+          Remove-MgDirectoryRoleMemberByRef -DirectoryRoleId $role.Id -DirectoryObjectId $user.Id
+        timeout: 120

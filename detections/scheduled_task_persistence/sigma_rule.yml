@@ -1,0 +1,53 @@
+title: Scheduled Task Persistence - Suspicious Task Creation (EID 4698)
+id: 4a1b2c3d-5e6f-4789-9012-3a4b5c6d7e8f
+status: experimental
+description: |
+  Détecte la création d'une tâche planifiée suspecte via Windows Security Event
+  ID 4698 (A scheduled task was created). La règle se concentre sur les
+  contenus de tâche (TaskContent) contenant des marqueurs d'exécution
+  obfusquée/encodée ou des binaires/chemins anormaux (ex : PowerShell -enc,
+  IEX/Invoke-Expression, exécution depuis %TEMP%, %APPDATA%, etc.).
+references:
+  - https://attack.mitre.org/techniques/T1053/005/
+  - https://learn.microsoft.com/windows/security/threat-protection/auditing/event-4698
+author: SOC Detection Engineering Team
+date: 2026/04/29
+modified: 2026/04/29
+tags:
+  - attack.persistence
+  - attack.t1053
+  - attack.t1053.005
+logsource:
+  product: windows
+  service: security
+detection:
+  selection_event:
+    EventID: 4698
+  selection_suspicious_task_content:
+    TaskContent|contains:
+      - 'powershell'
+      - 'PowerShell'
+      - '-enc'
+      - '-EncodedCommand'
+      - 'IEX'
+      - 'Invoke-Expression'
+      - 'DownloadString'
+      - '%TEMP%'
+      - '%APPDATA%'
+      - 'AppData'
+      - 'cmd.exe'
+  filter_legit_microsoft_task:
+    TaskName|startswith:
+      - 'Microsoft\'
+  condition: selection_event and selection_suspicious_task_content and not filter_legit_microsoft_task
+fields:
+  - TaskName
+  - TaskContent
+  - TargetUserName
+  - SubjectUserName
+  - SubjectDomainName
+falsepositives:
+  - Tâches ITSM/monitoring légitimes avec PowerShell signé (à allowlister)
+  - Maintenance applicative (à corréler avec tickets)
+level: critical
+

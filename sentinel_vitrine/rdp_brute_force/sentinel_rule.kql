@@ -1,0 +1,20 @@
+// RDP Brute Force (T1110.001) - Microsoft Sentinel (KQL) - demo
+// Telemetry assumptions for the recruiter demo (matches our future samples/ JSON):
+// - Table: SecurityEvent
+// - Fields: TimeGenerated, Computer, EventID, LogonType, IpAddress, TargetUserName
+
+let window = 5m;
+SecurityEvent
+| where EventID in (4625, 4624)
+| where LogonType in (10, 3)
+| where IpAddress !in ("-", "127.0.0.1", "::1", "LOCAL")
+| extend Target = tostring(TargetUserName)
+| extend B = bin(TimeGenerated, window)
+| summarize Failures = countif(EventID == 4625),
+            Successes = countif(EventID == 4624),
+            TargetUsers = make_set(Target, 50)
+  by Computer, IpAddress = tostring(IpAddress), B
+| where Failures > 20
+| project TimeGenerated = B, Computer, IpAddress, Failures, Successes, TargetUsers
+| order by Failures desc, TimeGenerated desc
+

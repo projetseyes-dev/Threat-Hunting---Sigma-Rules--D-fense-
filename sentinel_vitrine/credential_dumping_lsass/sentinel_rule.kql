@@ -1,0 +1,25 @@
+// Credential Dumping - Suspicious LSASS Process Access (T1003.001)
+// Microsoft Sentinel (KQL) - demo
+// Telemetry assumptions for the recruiter demo (matches our future samples/ JSON):
+// - Table: SysmonProcessAccess (custom connector / demo table)
+// - Fields: TimeGenerated, Computer, EventID=10, TargetImage, SourceImage, GrantedAccess, User, CallTrace
+
+let lsass_targetsuffix = @"\\lsass.exe";
+let suspicious_ga = dynamic(["0x1010","0x1410","0x1438","0x143A","0x1FFFFF","0x101010","0x1F1FFF","0x1F2FFF","0x1F3FFF"]);
+
+let allow_src_endswith = dynamic([@"\\MsMpEng.exe", @"\\MsSense.exe", @"\\NisSrv.exe", @"\\smartscreen.exe", @"\\WerFault.exe", @"\\csrss.exe", @"\\wininit.exe", @"\\services.exe"]);
+
+let edr_vendor_paths = dynamic([@"\\Program Files\\Windows Defender\\", @"\\Program Files\\CrowdStrike\\", @"\\Program Files\\SentinelOne\\", @"\\Program Files\\Cybereason\\", @"\\Program Files\\Carbon Black\\"]);
+
+SysmonProcessAccess
+| where EventID == 10
+| extend tgt = tolower(tostring(TargetImage))
+| where tgt endswith (tolower(lsass_targetsuffix))
+| extend ga = tolower(tostring(GrantedAccess))
+| where ga in~ ("0x1010","0x1410","0x1438","0x143A","0x1FFFFF","0x101010","0x1F1FFF","0x1F2FFF","0x1F3FFF")
+| extend src = tolower(tostring(SourceImage))
+| where not(src has_any (@"\\MsMpEng.exe",@"\\MsSense.exe",@"\\NisSrv.exe",@"\\smartscreen.exe",@"\\WerFault.exe",@"\\csrss.exe",@"\\wininit.exe",@"\\services.exe'))
+| where not(src has_any (@"\\Program Files\\Windows Defender\\",@"\\Program Files\\CrowdStrike\\",@"\\Program Files\\SentinelOne\\",@"\\Program Files\\Cybereason\\",@"\\Program Files\\Carbon Black\\'))
+| project TimeGenerated, Computer, User, SourceImage, TargetImage, GrantedAccess, CallTrace
+| order by TimeGenerated desc
+

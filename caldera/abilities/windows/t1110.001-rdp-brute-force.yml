@@ -1,0 +1,21 @@
+- id: 7c8d9e0f-1a2b-4c3d-9e4f-5a6b7c8d9e0f
+  name: T1110.001 - RDP Brute Force Simulation
+  description: |
+    Génère 25 EID 4625 LogonType 10 en moins de 5 minutes via une boucle
+    de net use avec un mot de passe invalide vers le poste local. Cible :
+    déclencher la règle `rdp_brute_force.yml` (>20 échecs / 5 min).
+  tactic: credential-access
+  technique:
+    attack_id: T1110.001
+    name: Password Guessing
+  platforms:
+    windows:
+      psh:
+        command: |
+          for ($i=1; $i -le 25; $i++) {
+            cmdkey /add:$env:COMPUTERNAME /user:bogus_caldera_$i /pass:WrongPassword | Out-Null
+            net use \\$env:COMPUTERNAME /user:bogus_caldera_$i WrongPassword 2>$null | Out-Null
+            cmdkey /delete:$env:COMPUTERNAME 2>$null | Out-Null
+            Start-Sleep -Milliseconds 200
+          }
+        timeout: 120

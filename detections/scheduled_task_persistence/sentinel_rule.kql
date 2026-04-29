@@ -1,0 +1,32 @@
+// Scheduled Task Persistence (EID 4698) - demo
+// Assumed table/fields in Sentinel:
+// - Table: SecurityEvent
+// - Fields: TimeGenerated, Computer, EventID, TaskName, TaskContent, TargetUserName, SubjectUserName
+
+SecurityEvent
+| where EventID == 4698
+| where TaskName !startswith "Microsoft\\"
+| where TaskContent has_any (
+    "powershell","PowerShell","-enc","-EncodedCommand",
+    "IEX","Invoke-Expression","DownloadString",
+    "%TEMP%","%APPDATA%","AppData","cmd.exe"
+  )
+| project TimeGenerated, Computer, TaskName, TargetUserName, SubjectUserName, TaskContent
+| order by TimeGenerated desc
+
+// Scheduled Task Persistence (EID 4698) - demo
+// Assumed table/fields in Sentinel:
+// - Table: SecurityEvent
+// - Fields: TimeGenerated, Computer, EventID, TaskName, TaskContent, TargetUserName, SubjectUserName
+
+SecurityEvent
+| where EventID == 4698
+| where TaskName !startswith "Microsoft\\"
+| where TaskContent has_any (
+    "powershell","PowerShell","-enc","-EncodedCommand",
+    "IEX","Invoke-Expression","DownloadString",
+    "%TEMP%","%APPDATA%","AppData","cmd.exe"
+  )
+| project TimeGenerated, Computer, TaskName, TargetUserName, SubjectUserName, TaskContent
+| order by TimeGenerated desc
+

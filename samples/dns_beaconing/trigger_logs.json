@@ -1,0 +1,170 @@
+{
+  "schemaVersion": 1,
+  "scenario": "dns_beaconing",
+  "matches_rule": "detections/dns_beaconing/sentinel_rule.kql",
+  "tables": {
+    "SysmonEvent": [
+      {
+        "TimeGenerated": "2026-04-29T11:00:00Z",
+        "Computer": "WS03",
+        "EventID": 22,
+        "QueryName": "gtq8ZXJfRDJSb24wdjJOSjlOanY3RUcyVXZGcVRGVmRpZkFBQQ.lab.evil",
+        "QueryType": "TXT",
+        "Image": "C:\\Windows\\System32\\cmd.exe",
+        "User": "CORP\\carol",
+        "DestinationIp": "203.0.113.53"
+      },
+      {
+        "TimeGenerated": "2026-04-29T11:00:15Z",
+        "Computer": "WS03",
+        "EventID": 22,
+        "QueryName": "gtq8ZXJfRDJSb24wdjJOSjlOanY3RUcyVXZGcVRGVmRpZkFBQQ.lab.evil",
+        "QueryType": "TXT",
+        "Image": "C:\\Windows\\System32\\cmd.exe",
+        "User": "CORP\\carol",
+        "DestinationIp": "203.0.113.53"
+      },
+      {
+        "TimeGenerated": "2026-04-29T11:00:30Z",
+        "Computer": "WS03",
+        "EventID": 22,
+        "QueryName": "gtq8ZXJfRDJSb24wdjJOSjlOanY3RUcyVXZGcVRGVmRpZkFBQQ.lab.evil",
+        "QueryType": "TXT",
+        "Image": "C:\\Windows\\System32\\cmd.exe",
+        "User": "CORP\\carol",
+        "DestinationIp": "203.0.113.53"
+      },
+      {
+        "TimeGenerated": "2026-04-29T11:00:45Z",
+        "Computer": "WS03",
+        "EventID": 22,
+        "QueryName": "gtq8ZXJfRDJSb24wdjJOSjlOanY3RUcyVXZGcVRGVmRpZkFBQQ.lab.evil",
+        "QueryType": "TXT",
+        "Image": "C:\\Windows\\System32\\cmd.exe",
+        "User": "CORP\\carol",
+        "DestinationIp": "203.0.113.53"
+      },
+      {
+        "TimeGenerated": "2026-04-29T11:01:00Z",
+        "Computer": "WS03",
+        "EventID": 22,
+        "QueryName": "gtq8ZXJfRDJSb24wdjJOSjlOanY3RUcyVXZGcVRGVmRpZkFBQQ.lab.evil",
+        "QueryType": "TXT",
+        "Image": "C:\\Windows\\System32\\cmd.exe",
+        "User": "CORP\\carol",
+        "DestinationIp": "203.0.113.53"
+      },
+      {
+        "TimeGenerated": "2026-04-29T11:01:15Z",
+        "Computer": "WS03",
+        "EventID": 22,
+        "QueryName": "gtq8ZXJfRDJSb24wdjJOSjlOanY3RUcyVXZGcVRGVmRpZkFBQQ.lab.evil",
+        "QueryType": "TXT",
+        "Image": "C:\\Windows\\System32\\cmd.exe",
+        "User": "CORP\\carol",
+        "DestinationIp": "203.0.113.53"
+      },
+      {
+        "TimeGenerated": "2026-04-29T11:01:30Z",
+        "Computer": "WS03",
+        "EventID": 22,
+        "QueryName": "gtq8ZXJfRDJSb24wdjJOSjlOanY3RUcyVXZGcVRGVmRpZkFBQQ.lab.evil",
+        "QueryType": "TXT",
+        "Image": "C:\\Windows\\System32\\cmd.exe",
+        "User": "CORP\\carol",
+        "DestinationIp": "203.0.113.53"
+      },
+      {
+        "TimeGenerated": "2026-04-29T11:01:45Z",
+        "Computer": "WS03",
+        "EventID": 22,
+        "QueryName": "gtq8ZXJfRDJSb24wdjJOSjlOanY3RUcyVXZGcVRGVmRpZkFBQQ.lab.evil",
+        "QueryType": "TXT",
+        "Image": "C:\\Windows\\System32\\cmd.exe",
+        "User": "CORP\\carol",
+        "DestinationIp": "203.0.113.53"
+      },
+      {
+        "TimeGenerated": "2026-04-29T11:02:00Z",
+        "Computer": "WS03",
+        "EventID": 22,
+        "QueryName": "gtq8ZXJfRDJSb24wdjJOSjlOanY3RUcyVXZGcVRGVmRpZkFBQQ.lab.evil",
+        "QueryType": "TXT",
+        "Image": "C:\\Windows\\System32\\cmd.exe",
+        "User": "CORP\\carol",
+        "DestinationIp": "203.0.113.53"
+      },
+      {
+        "TimeGenerated": "2026-04-29T11:02:15Z",
+        "Computer": "WS03",
+        "EventID": 22,
+        "QueryName": "gtq8ZXJfRDJSb24wdjJOSjlOanY3RUcyVXZGcVRGVmRpZkFBQQ.lab.evil",
+        "QueryType": "TXT",
+        "Image": "C:\\Windows\\System32\\cmd.exe",
+        "User": "CORP\\carol",
+        "DestinationIp": "203.0.113.53"
+      },
+      {
+        "TimeGenerated": "2026-04-29T11:02:30Z",
+        "Computer": "WS03",
+        "EventID": 22,
+        "QueryName": "gtq8ZXJfRDJSb24wdjJOSjlOanY3RUcyVXZGcVRGVmRpZkFBQQ.lab.evil",
+        "QueryType": "TXT",
+        "Image": "C:\\Windows\\System32\\cmd.exe",
+        "User": "CORP\\carol",
+        "DestinationIp": "203.0.113.53"
+      },
+      {
+        "TimeGenerated": "2026-04-29T11:02:45Z",
+        "Computer": "WS03",
+        "EventID": 22,
+        "QueryName": "gtq8ZXJfRDJSb24wdjJOSjlOanY3RUcyVXZGcVRGVmRpZkFBQQ.lab.evil",
+        "QueryType": "TXT",
+        "Image": "C:\\Windows\\System32\\cmd.exe",
+        "User": "CORP\\carol",
+        "DestinationIp": "203.0.113.53"
+      },
+      {
+        "TimeGenerated": "2026-04-29T11:03:00Z",
+        "Computer": "WS03",
+        "EventID": 22,
+        "QueryName": "gtq8ZXJfRDJSb24wdjJOSjlOanY3RUcyVXZGcVRGVmRpZkFBQQ.lab.evil",
+        "QueryType": "TXT",
+        "Image": "C:\\Windows\\System32\\cmd.exe",
+        "User": "CORP\\carol",
+        "DestinationIp": "203.0.113.53"
+      },
+      {
+        "TimeGenerated": "2026-04-29T11:03:15Z",
+        "Computer": "WS03",
+        "EventID": 22,
+        "QueryName": "gtq8ZXJfRDJSb24wdjJOSjlOanY3RUcyVXZGcVRGVmRpZkFBQQ.lab.evil",
+        "QueryType": "TXT",
+        "Image": "C:\\Windows\\System32\\cmd.exe",
+        "User": "CORP\\carol",
+        "DestinationIp": "203.0.113.53"
+      },
+      {
+        "TimeGenerated": "2026-04-29T11:03:30Z",
+        "Computer": "WS03",
+        "EventID": 22,
+        "QueryName": "gtq8ZXJfRDJSb24wdjJOSjlOanY3RUcyVXZGcVRGVmRpZkFBQQ.lab.evil",
+        "QueryType": "TXT",
+        "Image": "C:\\Windows\\System32\\cmd.exe",
+        "User": "CORP\\carol",
+        "DestinationIp": "203.0.113.53"
+      },
+      {
+        "TimeGenerated": "2026-04-29T11:03:45Z",
+        "Computer": "WS03",
+        "EventID": 22,
+        "QueryName": "gtq8ZXJfRDJSb24wdjJOSjlOanY3RUcyVXZGcVRGVmRpZkFBQQ.lab.evil",
+        "QueryType": "TXT",
+        "Image": "C:\\Windows\\System32\\cmd.exe",
+        "User": "CORP\\carol",
+        "DestinationIp": "203.0.113.53"
+      }
+    ]
+  }
+}
+

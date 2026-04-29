@@ -1,0 +1,194 @@
+name: Sigma Detection CI
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - "rules/**"
+      - "validate_sigma.py"
+      - "convert_rules.py"
+      - "generate_navigator_layer.py"
+      - "requirements.txt"
+      - ".github/workflows/sigma-ci.yml"
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  lint-yaml:
+    name: Lint YAML
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install yamllint
+        run: pip install --quiet yamllint==1.35.1
+
+      - name: Lint Sigma rules
+        run: |
+          cat > .yamllint <<'EOF'
+          extends: default
+          rules:
+            line-length:
+              max: 200
+              level: warning
+            comments-indentation: disable
+            document-start: disable
+            truthy:
+              check-keys: false
+            indentation:
+              spaces: 2
+              indent-sequences: true
+          EOF
+          yamllint -c .yamllint rules/
+
+  validate-sigma:
+    name: Validate Sigma schema
+    runs-on: ubuntu-latest
+    needs: lint-yaml
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run schema validator (strict)
+        run: python validate_sigma.py rules/ --strict
+
+  convert-multi-siem:
+    name: Convert to SPL & KQL
+    runs-on: ubuntu-latest
+    needs: validate-sigma
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install sigma-cli + backends
+        run: |
+          pip install -r requirements.txt
+          pip install sigma-cli==1.0.4 \
+                      pysigma-backend-splunk \
+                      pysigma-backend-kusto \
+                      pysigma-pipeline-windows \
+                      pysigma-pipeline-sysmon
+
+      - name: Convert rules
+        run: python convert_rules.py rules/ --out build/
+
+      - name: Upload conversion artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: siem-queries
+          path: |
+            build/splunk/
+            build/sentinel/
+            build/conversion_report.md
+          retention-days: 30
+
+  generate-coverage:
+    name: Generate ATT&CK Navigator layer
+    runs-on: ubuntu-latest
+    needs: validate-sigma
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Generate Navigator layer
+        run: |
+          python generate_navigator_layer.py rules/ \
+            --out coverage/attack_navigator_layer.json \
+            --name "SOC Detection Coverage - ${GITHUB_REF_NAME}"
+
+      - name: Upload coverage layer
+        uses: actions/upload-artifact@v4
+        with:
+          name: attack-navigator-layer
+          path: coverage/attack_navigator_layer.json
+          retention-days: 90
+
+  pr-summary:
+    name: PR comment with coverage
+    runs-on: ubuntu-latest
+    needs: [validate-sigma, generate-coverage]
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Build summary
+        id: summary
+        run: |
+          python generate_navigator_layer.py rules/ \
+            --out /tmp/layer.json --name "PR ${{ github.event.number }}"
+          {
+            echo "summary<<EOF"
+            echo "## Couverture ATT&CK"
+            echo ""
+            python -c "import json; d=json.load(open('/tmp/layer.json')); print(f\"- Règles : **{d['metadata'][1]['value']}**\"); print(f\"- Techniques couvertes : **{d['metadata'][2]['value']}**\"); print(); [print(f\"  - {t['techniqueID']} (score={t['score']})\") for t in d['techniques']]"
+            echo ""
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Comment on PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const body = `${{ steps.summary.outputs.summary }}`;
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            const existing = comments.find(c =>
+              c.user.type === 'Bot' && c.body.includes('## Couverture ATT&CK'));
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }

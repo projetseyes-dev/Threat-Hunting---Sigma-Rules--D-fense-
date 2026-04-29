@@ -1,0 +1,72 @@
+title: Process Hollowing - Suspicious Image Mismatch in Legitimate Process
+id: 7f3b4c19-2d8a-4d5b-9a4e-3c6f1b2e9a01
+status: experimental
+description: |
+  Détecte un comportement caractéristique de Process Hollowing (T1055.012) où un
+  processus apparemment légitime (svchost.exe, explorer.exe, notepad.exe, etc.)
+  est créé en état suspendu par un parent non-canonique, puis voit son image
+  remplacée. La règle s'appuie sur la corrélation Sysmon EID 1 (ProcessCreate)
+  et EID 8 (CreateRemoteThread) / EID 25 (ProcessTampering) lorsque disponible.
+references:
+  - https://attack.mitre.org/techniques/T1055/012/
+  - https://www.elastic.co/security-labs/process-hollowing-detection
+  - https://github.com/SigmaHQ/sigma/tree/master/rules/windows/process_creation
+author: SOC Detection Engineering Team
+date: 2026/04/29
+modified: 2026/04/29
+tags:
+  - attack.defense_evasion
+  - attack.privilege_escalation
+  - attack.t1055
+  - attack.t1055.012
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection_target:
+    Image|endswith:
+      - '\svchost.exe'
+      - '\explorer.exe'
+      - '\notepad.exe'
+      - '\rundll32.exe'
+      - '\dllhost.exe'
+      - '\regsvr32.exe'
+      - '\werfault.exe'
+  selection_suspended:
+    CommandLine|contains:
+      - 'CREATE_SUSPENDED'
+      - '-Suspended'
+  filter_legit_parent_svchost:
+    Image|endswith: '\svchost.exe'
+    ParentImage|endswith:
+      - '\services.exe'
+  filter_legit_parent_explorer:
+    Image|endswith: '\explorer.exe'
+    ParentImage|endswith:
+      - '\userinit.exe'
+      - '\winlogon.exe'
+  anomaly_parent:
+    ParentImage|endswith:
+      - '\powershell.exe'
+      - '\pwsh.exe'
+      - '\cmd.exe'
+      - '\wscript.exe'
+      - '\cscript.exe'
+      - '\mshta.exe'
+      - '\winword.exe'
+      - '\excel.exe'
+      - '\outlook.exe'
+  condition: selection_target and (selection_suspended or anomaly_parent) and not (filter_legit_parent_svchost or filter_legit_parent_explorer)
+fields:
+  - Image
+  - ParentImage
+  - ParentCommandLine
+  - CommandLine
+  - User
+  - IntegrityLevel
+  - Hashes
+falsepositives:
+  - Outils EDR/AV légitimes (rares) effectuant de l'injection contrôlée
+  - Solutions de packaging logiciel (App-V, MSIX) — à mettre en allowlist par signature
+  - Scripts d'administration créant des processus suspendus (à profiler)
+level: high
