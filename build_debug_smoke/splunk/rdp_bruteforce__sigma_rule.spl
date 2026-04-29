@@ -1,0 +1,1 @@
+source="WinEventLog:Security" EventCode=4625 LogonType IN (10, 3) Status IN ("0xC000006D", "0xC000006A", "0xC0000064", "0xC000015B") NOT (IpAddress IN ("-", "127.0.0.1", "::1", "LOCAL")) | table IpAddress,TargetUserName,WorkstationName,LogonType,Status

@@ -1,0 +1,2 @@
+EventCode=22 QueryType IN ("TXT", "NULL")
+| regex QueryName="^[A-Za-z0-9+/=_-]{30,}\\\\..+\\\\.[a-z]{2,10}$" | table QueryName,QueryType,Computer

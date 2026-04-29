@@ -1,0 +1,1 @@
+(EventID == 4625 and (LogonType in~ ("10", "3")) and (Status in~ ("0xC000006D", "0xC000006A", "0xC0000064", "0xC000015B"))) and (not((IpAddress in~ ("-", "127.0.0.1", "::1", "LOCAL"))))

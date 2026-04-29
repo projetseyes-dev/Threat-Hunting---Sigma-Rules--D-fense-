@@ -202,7 +202,8 @@ def main(argv: list[str] | None = None) -> int:
     results: list[ConversionResult] = []
     for rule in rules:
         rid, title = load_rule_meta(rule)
-        slug = rule.stem
+        folder_slug = rule.parent.name.replace(" ", "_").replace("-", "_")
+        slug = f"{folder_slug}__{rule.stem}"
         res = ConversionResult(rule_path=rule, title=title, rule_id=rid)
 
         if "splunk" in args.targets:

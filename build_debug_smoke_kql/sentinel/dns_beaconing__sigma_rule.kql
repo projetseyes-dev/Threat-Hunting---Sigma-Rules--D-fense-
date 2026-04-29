@@ -1,0 +1,1 @@
+(EventID == 22 and (QueryType in~ ("TXT", "NULL"))) and QueryName matches regex "^[A-Za-z0-9+/=_-]{30,}\\\\..+\\\\.[a-z]{2,10}$"

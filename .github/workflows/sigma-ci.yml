@@ -145,6 +145,37 @@ jobs:
           mkdir -p build/logs
           python convert_rules.py detections/ --targets splunk --out build/ | tee build/logs/convert_splunk.log
 
+      - name: Smoke test SPL outputs (exist + non-empty)
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          import sys
+
+          rules = sorted(Path("detections").rglob("sigma_rule.y*ml"))
+          expected = [f"{r.parent.name.replace(' ', '_').replace('-', '_')}__{r.stem}.spl" for r in rules]
+          out_dir = Path("build/splunk")
+
+          missing = [name for name in expected if not (out_dir / name).exists()]
+          empty = [name for name in expected if (out_dir / name).exists() and (out_dir / name).stat().st_size == 0]
+
+          print(f"Expected SPL files: {len(expected)}")
+          print(f"Present SPL files : {len(list(out_dir.glob('*.spl')))}")
+
+          if missing:
+              print("[ERROR] Missing SPL outputs:")
+              for m in missing:
+                  print(" -", m)
+          if empty:
+              print("[ERROR] Empty SPL outputs:")
+              for e in empty:
+                  print(" -", e)
+
+          if missing or empty:
+              sys.exit(1)
+          print("Smoke test SPL passed.")
+          PY
+
       - name: Upload SPL artifacts + logs
         if: always()
         uses: actions/upload-artifact@v4
@@ -182,6 +213,37 @@ jobs:
           set -euo pipefail
           mkdir -p build/logs
           python convert_rules.py detections/ --targets kusto --out build/ | tee build/logs/convert_sentinel.log
+
+      - name: Smoke test KQL outputs (exist + non-empty)
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          import sys
+
+          rules = sorted(Path("detections").rglob("sigma_rule.y*ml"))
+          expected = [f"{r.parent.name.replace(' ', '_').replace('-', '_')}__{r.stem}.kql" for r in rules]
+          out_dir = Path("build/sentinel")
+
+          missing = [name for name in expected if not (out_dir / name).exists()]
+          empty = [name for name in expected if (out_dir / name).exists() and (out_dir / name).stat().st_size == 0]
+
+          print(f"Expected KQL files: {len(expected)}")
+          print(f"Present KQL files : {len(list(out_dir.glob('*.kql')))}")
+
+          if missing:
+              print("[ERROR] Missing KQL outputs:")
+              for m in missing:
+                  print(" -", m)
+          if empty:
+              print("[ERROR] Empty KQL outputs:")
+              for e in empty:
+                  print(" -", e)
+
+          if missing or empty:
+              sys.exit(1)
+          print("Smoke test KQL passed.")
+          PY
 
       - name: Upload KQL artifacts + logs
         if: always()
