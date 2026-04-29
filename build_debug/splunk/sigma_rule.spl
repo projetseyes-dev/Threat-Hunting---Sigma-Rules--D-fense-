@@ -1,0 +1,1 @@
+source="WinEventLog:Security" EventCode=4698 TaskContent IN ("*powershell*", "*PowerShell*", "*-enc*", "*-EncodedCommand*", "*IEX*", "*Invoke-Expression*", "*DownloadString*", "*%TEMP%*", "*%APPDATA%*", "*AppData*", "*cmd.exe*") NOT TaskName="Microsoft\\*" | table TaskName,TaskContent,TargetUserName,SubjectUserName,SubjectDomainName

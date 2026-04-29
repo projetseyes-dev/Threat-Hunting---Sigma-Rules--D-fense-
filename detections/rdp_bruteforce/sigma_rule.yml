@@ -39,7 +39,7 @@ detection:
       - '::1'
       - 'LOCAL'
   timeframe: 5m
-  condition: failed_logon and not filter_local | count(EventID) by IpAddress, TargetUserName > 20
+  condition: failed_logon and not filter_local
 fields:
   - IpAddress
   - TargetUserName

@@ -27,7 +27,7 @@ detection:
       - 'NULL'
   selection_long_label:
     QueryName|re: '^[A-Za-z0-9+/=_-]{30,}\\..+\\.[a-z]{2,10}$'
-  condition: selection_dns and selection_long_label | count() by Computer, QueryName > 15
+  condition: selection_dns and selection_long_label
 fields:
   - QueryName
   - QueryType

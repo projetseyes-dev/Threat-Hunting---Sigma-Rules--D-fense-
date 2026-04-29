@@ -41,6 +41,7 @@ except ImportError:
 class ConversionResult:
     rule_path: Path
     title: str = ""
+    rule_id: str = ""
     splunk_ok: bool = False
     sentinel_ok: bool = False
     splunk_output: Path | None = None
@@ -128,7 +129,9 @@ def collect_rules(target: Path) -> list[Path]:
     return []
 
 
-def write_report(results: list[ConversionResult], report_path: Path) -> None:
+def write_report(
+    results: list[ConversionResult], report_path: Path, selected_targets: set[str]
+) -> None:
     lines = [
         "# Rapport de conversion Sigma → SIEM",
         "",
@@ -138,11 +141,20 @@ def write_report(results: list[ConversionResult], report_path: Path) -> None:
         "|-------|-----------|--------------|",
     ]
     for r in results:
-        sp = "OK" if r.splunk_ok else "FAIL"
-        se = "OK" if r.sentinel_ok else "FAIL"
-        lines.append(f"| `{r.rule_path.name}` — {r.title} | {sp} | {se} |")
+        sp = ("OK" if r.splunk_ok else "FAIL") if "splunk" in selected_targets else "N/A"
+        se = ("OK" if r.sentinel_ok else "FAIL") if "kusto" in selected_targets else "N/A"
+        rule_label = f"{r.rule_path.parent.name}/{r.rule_path.name}"
+        lines.append(f"| `{rule_label}` — {r.title} | {sp} | {se} |")
 
-    failures = [r for r in results if not (r.splunk_ok and r.sentinel_ok)]
+    def is_rule_ok_local(r: ConversionResult) -> bool:
+        checks = []
+        if "splunk" in selected_targets:
+            checks.append(r.splunk_ok)
+        if "kusto" in selected_targets:
+            checks.append(r.sentinel_ok)
+        return all(checks) if checks else True
+
+    failures = [r for r in results if not is_rule_ok_local(r)]
     if failures:
         lines.extend(["", "## Échecs détaillés", ""])
         for r in failures:
@@ -191,7 +203,7 @@ def main(argv: list[str] | None = None) -> int:
     for rule in rules:
         rid, title = load_rule_meta(rule)
         slug = rule.stem
-        res = ConversionResult(rule_path=rule, title=title)
+        res = ConversionResult(rule_path=rule, title=title, rule_id=rid)
 
         if "splunk" in args.targets:
             out = splunk_dir / f"{slug}.spl"
@@ -224,11 +236,20 @@ def main(argv: list[str] | None = None) -> int:
         results.append(res)
 
     report = args.out / "conversion_report.md"
-    write_report(results, report)
+    selected_targets = set(args.targets)
+    write_report(results, report, selected_targets)
     print(f"\nRapport : {report}")
 
-    failed = sum(1 for r in results if not (r.splunk_ok and r.sentinel_ok))
-    print(f"=== {len(results) - failed}/{len(results)} règles converties (toutes cibles) ===")
+    def is_rule_ok(r: ConversionResult) -> bool:
+        checks = []
+        if "splunk" in selected_targets:
+            checks.append(r.splunk_ok)
+        if "kusto" in selected_targets:
+            checks.append(r.sentinel_ok)
+        return all(checks) if checks else True
+
+    failed = sum(1 for r in results if not is_rule_ok(r))
+    print(f"=== {len(results) - failed}/{len(results)} règles converties (cibles sélectionnées) ===")
     return 0 if failed == 0 else 1
 
 
