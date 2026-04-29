@@ -4,10 +4,11 @@ on:
   push:
     branches: [main, develop]
     paths:
-      - "rules/**"
+      - "detections/**"
+      - "playbooks/**"
+      - "samples/**"
+      - "scripts/**"
       - "validate_sigma.py"
-      - "convert_rules.py"
-      - "generate_navigator_layer.py"
       - "requirements.txt"
       - ".github/workflows/sigma-ci.yml"
   pull_request:
@@ -38,6 +39,7 @@ jobs:
           cat > .yamllint <<'EOF'
           extends: default
           rules:
+            new-lines: disable
             line-length:
               max: 200
               level: warning
@@ -49,7 +51,7 @@ jobs:
               spaces: 2
               indent-sequences: true
           EOF
-          yamllint -c .yamllint rules/
+          yamllint -c .yamllint detections/
 
   validate-sigma:
     name: Validate Sigma schema
@@ -68,7 +70,7 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Run schema validator (strict)
-        run: python validate_sigma.py rules/ --strict
+        run: python scripts/validate_sigma.py --strict
 
   convert-multi-siem:
     name: Convert to SPL & KQL

@@ -1,4 +1,4 @@
-# Threat Hunting & Sigma Rules — Bibliothèque de Détection
+# Threat Hunting & Sigma Rules - Bibliothèque de Détection
 
 > **Auteur :** SOC Manager / Threat Hunter
 > **Objectif :** Fournir une bibliothèque de règles de détection structurée, versionnée et documentée, alignée sur le framework **MITRE ATT&CK**, intégrable dans un SIEM (**Splunk** / **Microsoft Sentinel**) et accompagnée de playbooks de réponse à incident pour les analystes SOC (N1/N2/N3).
@@ -170,13 +170,13 @@ Importer ensuite `coverage/attack_navigator_layer.json` dans <https://mitre-atta
 
 Chaque dossier de règle est **autoportant** :
 
-– `*.yml` — la détection au format Sigma.
-– `playbook.md` — la procédure de réponse à incident.
-– `tests/atomic.yaml` — le test Atomic Red Team pour valider la règle en lab.
+– `*.yml` - la détection au format Sigma.
+– `playbook.md` - la procédure de réponse à incident.
+– `tests/atomic.yaml` - le test Atomic Red Team pour valider la règle en lab.
 
 ---
 
-## 4. Format Sigma — Pourquoi ?
+## 4. Format Sigma - Pourquoi ?
 
 [Sigma](https://github.com/SigmaHQ/sigma) est le **standard ouvert** de description de règles de détection, agnostique au SIEM. Une règle écrite une fois est compilable vers :
 
@@ -297,7 +297,7 @@ Chaque règle dispose d'un fichier `tests/atomic.yaml` qui décrit :
 
 Exemple : `rules/credential_dumping_lsass/tests/atomic.yaml` couvre 3 méthodes (comsvcs.dll, ProcDump, Task Manager).
 
-> **Avertissement** : ces tests peuvent générer du bruit ou des credentials en mémoire — exécuter UNIQUEMENT en lab isolé.
+> **Avertissement** : ces tests peuvent générer du bruit ou des credentials en mémoire - exécuter UNIQUEMENT en lab isolé.
 
 ## 9. Mesure de visibilité (DeTT&CT)
 
@@ -375,15 +375,15 @@ python ml/logon_anomaly_detector.py --train events_30d.csv --score events_today.
 
 Le flux DEX ci-dessous montre comment passer de la **détection** à la **validation/exécution contrôlée**, puis à l’**exploitation SOC**.
 
-1. **D — Détection (Sigma + Playbooks)**
+1. **D - Détection (Sigma + Playbooks)**
    – Chaque TTP est décrite en Sigma dans `rules/*/*.yml` avec un `playbook.md` associé.
    – La qualité de schéma est garantie par `validate_sigma.py`.
 
-2. **E — eXploitation contrôlée (Emulation Purple Team)**
+2. **E - eXploitation contrôlée (Emulation Purple Team)**
    – Chaque règle a un `tests/atomic.yaml` (PoC en lab + requêtes de validation SIEM).
    – Pour une exécution orchestrée : importer Caldera (dossier `caldera/`), puis lancer `soc-detection-coverage` pour rejouer toutes les capacités.
 
-3. **X — eXploitation SOC (triage, remédiation, tuning)**
+3. **X - eXploitation SOC (triage, remédiation, tuning)**
    – À chaque alerte : appliquer le playbook (N1 → N2/N3 → Containment → Eradication → Recovery).
    – Ajuster les seuils/allowlists et mesurer l’amélioration via la couverture Navigator (et idéalement DeTT&CT).
 
@@ -460,4 +460,4 @@ Ensuite, depuis l’UI Caldera :
 
 ## 16. Licence
 
-Règles publiées sous **Detection Rule License (DRL) 1.1** — réutilisation libre avec attribution.
+Règles publiées sous **Detection Rule License (DRL) 1.1** - réutilisation libre avec attribution.

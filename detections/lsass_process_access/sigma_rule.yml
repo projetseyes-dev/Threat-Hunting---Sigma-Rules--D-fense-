@@ -61,4 +61,3 @@ falsepositives:
   - Outils de diagnostic/métriques légitimes (Process Explorer, EDR audit) à allowlister par hôte.
   - Windows Error Reporting (WerFault) et processus système (cas à confirmer).
 level: critical
-

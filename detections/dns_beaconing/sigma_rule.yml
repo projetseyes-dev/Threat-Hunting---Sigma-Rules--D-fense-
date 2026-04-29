@@ -36,4 +36,3 @@ falsepositives:
   - DNS legitimes avec enregistrements TXT (DNS challenge, verification, monitoring)
   - Des environnements avec fortes charges de tests DNS (à valider avec baseline)
 level: high
-

@@ -50,4 +50,3 @@ falsepositives:
   - Tâches ITSM/monitoring légitimes avec PowerShell signé (à allowlister)
   - Maintenance applicative (à corréler avec tickets)
 level: critical
-

@@ -51,4 +51,3 @@ falsepositives:
   - Comptes de service mal configurés avec mot de passe expiré
   - Outils de monitoring/scan internes (à mettre en allowlist par IP)
   - Postes utilisateurs après changement de mot de passe (sessions cachées)
-

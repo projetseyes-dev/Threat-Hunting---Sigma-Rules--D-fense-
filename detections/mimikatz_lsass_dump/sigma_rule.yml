@@ -61,4 +61,3 @@ falsepositives:
   - Diagnostics admin manuels utilisant ProcDump/Task Manager
   - Scripts EDR en audit (à allowlister par hash ou par hôte)
 level: critical
-
